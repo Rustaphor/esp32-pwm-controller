@@ -19,11 +19,23 @@
 #include <freertos/task.h>
 #include <esp_log.h>
 
+
+static const char* TAG = "AppMainModule";       // Локальный тег логирования модуля
+
 using namespace std::chrono;
 
-const auto sleep_time = seconds {
+
+ #define NUM_TIMERS 1
+ TimerHandle_t xTimers[NUM_TIMERS];
+ 
+ const auto sleep_time = seconds {
     5
 };
+
+ void vMyTimer_callback(TimerHandle_t xTimer)
+ {
+    ESP_LOGI(TAG, "Numer of iteration %d", 4);
+ }
 
 void print_thread_info(const char *extra = nullptr)
 {
@@ -70,7 +82,7 @@ void thread_func()
         print_thread_info();
         std::this_thread::sleep_for(sleep_time);
     }
-}
+    }
 
 // Thread config creator
 esp_pthread_cfg_t create_config(const char *name, int core_id, int stack, int prio)
@@ -101,13 +113,20 @@ extern "C" void app_main(void)
     esp_pthread_set_cfg(&cfg);
     std::thread thread_2(thread_func);
 
+    // Start Software Timer
+    xTimers[0] = xTimerCreate("myTimer", 200, pdTRUE, (void*) 0, vMyTimer_callback);
+    if( xTimerStart(xTimers[0], 0 ) != pdPASS ) {
+        ESP_LOGE("myTimer","Error starting timer.");
+    }
+
+    // --- Console Module
+
+
+
+    // ---
+
     // Let the main task do something too
     while (true) {
-        std::stringstream ss;
-        ss << "core id: " << xPortGetCoreID()
-           << ", prio: " << uxTaskPriorityGet(nullptr)
-           << ", minimum free stack: " << uxTaskGetStackHighWaterMark(nullptr) << " bytes.";
-        ESP_LOGI(pcTaskGetName(nullptr), "%s", ss.str().c_str());
         std::this_thread::sleep_for(sleep_time);
     }
 }
