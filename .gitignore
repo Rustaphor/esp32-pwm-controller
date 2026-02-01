@@ -12,6 +12,7 @@
 *.swo
 *.bak
 *.tmp
+.clangd
 
 # Log files
 *.log
