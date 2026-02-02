@@ -9,7 +9,16 @@
 
 // Include necessary standard library headers
 #include <cstdint>
+#include "driver/ledc.h"
+#include "esp_err.h"
 // #include <functional>
+
+
+#define PWM_TIMER_DEFAULT       LEDC_TIMER_0
+#define PWM_OUTPUT_IO_DEFAULT   (17) // Define the output GPIO
+#define PWM_CHANNEL             LEDC_CHANNEL_0
+#define RWM_DUTY_RESOLUTION     LEDC_TIMER_8_BIT // Set duty resolution to 13 bits
+#define PWM_FREQ_DEFAULT        (50000)  // Frequency in Hertz. Set frequency at 50 kHz
 
 
 using namespace std;
@@ -25,45 +34,46 @@ class CPwmControl {
     public:
 
         // Constructors, destructors
-        constexpr CPwmControl() = default;
+        CPwmControl() = default;
         // explicit CPwmControl(/* parameters like pin, frequency, duty_cycle */);
-        ~CPwmControl() = default;
-
-        // Copy and move operations
-        CPwmControl(const CPwmControl&) = default;
-        CPwmControl& operator=(const CPwmControl&) = default;
-        CPwmControl(CPwmControl&&) = default;
-        CPwmControl& operator=(CPwmControl&&) = default;
+        ~CPwmControl() { setDutyCycle(0); };
 
         // Public methods
         bool initialize();
-        void setDutyCycle(float percent);
 
-        void setFrequency(uint32_t freqHz);
+        esp_err_t update();
+        
+        esp_err_t setDutyCycle(float percent);
+
+        esp_err_t setFrequency(uint32_t freqHz);
 
         /// Enable PWM output on the configured pin
-        void enable();
+        esp_err_t enable() {
+            return setDutyCycle(duty_cycle_);
+        };
 
         /// Disable PWM output (turns off signal)
-        void disable();
+        [[nodiscard]]
+        void disable() { setDutyCycle(0); }
 
         /// Get current duty cycle in percent
-        [[nodiscard]] float getDutyCycle() const { return duty_cycle_; }
+        [[nodiscard]]
+        float getDutyCycle() const { return duty_cycle_; }
 
         /// Get current frequency in Hz
-        [[nodiscard]] uint32_t getFrequency() const { return frequency_; }
-
-        /// Check if PWM output is currently enabled
-        [[nodiscard]] bool isEnabled() const { return is_enabled_; }
+        [[nodiscard]]
+        uint32_t getFrequency() const { return frequency_; }
 
         /// Get the GPIO pin assigned for PWM
-        [[nodiscard]] uint8_t getPin() const { return pin_; }
+        [[nodiscard]]
+        int getPin() const { return pin_; }
 
     private:
-        uint8_t pin_{0};
-        uint32_t frequency_{1000};  // Default 1kHz
+        int pin_{PWM_OUTPUT_IO_DEFAULT};
+        ledc_timer_t ldc_timer_{PWM_TIMER_DEFAULT};
+        ledc_channel_t ldc_channel_{PWM_CHANNEL};
+        uint32_t frequency_{PWM_FREQ_DEFAULT};  // Default 1kHz
         float duty_cycle_{0.0f};    // 0-100%
-        bool is_enabled_{false};
 };
 
 #endif  // PWM_CONTROL_H

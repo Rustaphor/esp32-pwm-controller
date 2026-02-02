@@ -48,7 +48,7 @@ using namespace std::chrono;
  TimerHandle_t xTimers[NUM_TIMERS];
  
  const auto sleep_time = seconds {
-    5
+    10
 };
 
  void vMyTimer_callback(TimerHandle_t xTimer)
@@ -146,8 +146,7 @@ extern "C" void app_main(void)
     esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
 
     /* Prompt to be printed before each line.
-     * This can be customized, made dynamic, etc.
-     */
+     * This can be customized, made dynamic, etc. */
     repl_config.prompt = PROMPT_STR ">";
     repl_config.max_cmdline_length = CONFIG_CONSOLE_MAX_COMMAND_LINE_LENGTH;
 
@@ -161,12 +160,11 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(esp_console_new_repl_uart(&hw_config, &repl_config, &repl));
 #endif
 
-    // Run Console Thread
+    /* Run Console Thread */
     ESP_ERROR_CHECK(esp_console_start_repl(repl));
-    // ---
 
     // Let the main task do something too
     while (true) {
-        this_thread::sleep_for(sleep_time);
+         this_thread::sleep_for(sleep_time);
     }
 }
