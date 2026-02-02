@@ -12,7 +12,6 @@
 *.swo
 *.bak
 *.tmp
-.clangd
 
 # Log files
 *.log
@@ -29,6 +28,7 @@ build/
 *.bin
 *.elf
 *.map
+*.lock
 flasher_args.json # Generated in build directory
 sdkconfig.old
 sdkconfig
