@@ -1,4 +1,3 @@
-idf_component_register(SRCS "pwm-fanctrl.cpp"
-                    # PRIV_REQUIRES console esp_driver_uart
+idf_component_register(SRCS "pwmconhelp.cpp" "pwmctrl.cpp" "pwm-fanctrl.cpp"
                     INCLUDE_DIRS ".")
 

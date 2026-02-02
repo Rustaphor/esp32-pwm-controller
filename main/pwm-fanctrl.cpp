@@ -3,20 +3,26 @@
 
 */
 
-#include <iostream>
-#include <chrono>
+
 #include <string>
-#include <sstream>
+
+// Thread загововки
+// #include <iostream>
+// #include <sstream>
+#include <chrono>
 #include <thread>
-#include <memory>
+// #include <memory>
 // #include "esp_pthread.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include "esp_system.h"
+
 #include "esp_log.h"
 #include "esp_console.h"
 #include "cmd_system.h"
 
+
+// Локальные заголовки
+#include "pwmconhelp.h"
 
 
 /*
@@ -31,7 +37,7 @@
 #endif
 
 
-static const char* TAG = "AppMainModule";       // Локальный тег логирования модуля
+static const char* TAG = __FILE_NAME__;       // Локальный тег логирования модуля
 #define PROMPT_STR CONFIG_IDF_TARGET
 
 using namespace std;
@@ -49,6 +55,8 @@ using namespace std::chrono;
  {
     ESP_LOGD(TAG, "Numer of iteration %d", 4);
  }
+
+
 
 // void print_thread_info(const char *extra = nullptr)
 // {
@@ -108,6 +116,7 @@ using namespace std::chrono;
 //     return cfg;
 // }
 
+
 extern "C" void app_main(void)
 {
     // // Create a thread using default values that can run on any core
@@ -132,7 +141,7 @@ extern "C" void app_main(void)
         ESP_LOGE(TAG,"Error starting timer.");
     }
 
-    // --- Console Module
+    // Initialize Console system
     esp_console_repl_t *repl = NULL;
     esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
 
@@ -145,6 +154,7 @@ extern "C" void app_main(void)
     /* Register commands */
     esp_console_register_help_command();
     register_system_common();
+    esp_console_register_pwmcontrol_command();
 
 #if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || defined(CONFIG_ESP_CONSOLE_UART_CUSTOM)
     esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
@@ -155,8 +165,8 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(esp_console_start_repl(repl));
     // ---
 
-    // // Let the main task do something too
-    // while (true) {
-    //     this_thread::sleep_for(sleep_time);
-    // }
+    // Let the main task do something too
+    while (true) {
+        this_thread::sleep_for(sleep_time);
+    }
 }
