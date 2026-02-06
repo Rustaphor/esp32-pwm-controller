@@ -9,10 +9,9 @@
 
 // Include necessary standard library headers
 #include <cstdint>
+#include <mutex>
 #include "driver/ledc.h"
 #include "esp_err.h"
-// #include <functional>
-
 
 #define PWM_TIMER_DEFAULT       LEDC_TIMER_0
 #define PWM_OUTPUT_IO_DEFAULT   (17) // Define the output GPIO
@@ -39,18 +38,15 @@ class CPwmControl {
         ~CPwmControl() { setDutyCycle(0); };
 
         // Public methods
-        bool initialize();
+        void initialize();
+        void initialize(float dc, uint32_t freqHz = PWM_FREQ_DEFAULT, uint8_t pin = PWM_OUTPUT_IO_DEFAULT, ledc_timer_t timerNum = PWM_TIMER_DEFAULT, ledc_channel_t channel = PWM_CHANNEL);
 
-        esp_err_t update();
-        
         esp_err_t setDutyCycle(float percent);
 
         esp_err_t setFrequency(uint32_t freqHz);
 
         /// Enable PWM output on the configured pin
-        esp_err_t enable() {
-            return setDutyCycle(duty_cycle_);
-        };
+        esp_err_t enable() { return setDutyCycle(duty_cycle_); };
 
         /// Disable PWM output (turns off signal)
         [[nodiscard]]
@@ -58,15 +54,18 @@ class CPwmControl {
 
         /// Get current duty cycle in percent
         [[nodiscard]]
-        float getDutyCycle() const { return duty_cycle_; }
+        float getDutyCycle() { return duty_cycle_; }
 
         /// Get current frequency in Hz
         [[nodiscard]]
-        uint32_t getFrequency() const { return frequency_; }
+        uint32_t getFrequency() { return frequency_; }
 
         /// Get the GPIO pin assigned for PWM
         [[nodiscard]]
         int getPin() const { return pin_; }
+
+    protected:
+            esp_err_t update();
 
     private:
         int pin_{PWM_OUTPUT_IO_DEFAULT};
@@ -74,6 +73,7 @@ class CPwmControl {
         ledc_channel_t ldc_channel_{PWM_CHANNEL};
         uint32_t frequency_{PWM_FREQ_DEFAULT};  // Default 1kHz
         float duty_cycle_{0.0f};    // 0-100%
+        mutable recursive_mutex rm_;
 };
 
 #endif  // PWM_CONTROL_H

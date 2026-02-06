@@ -1,14 +1,15 @@
 #include "pwmctrl.h"
 #include "esp_log.h"
 
-
 #define PWM_MAX_DUTY (2^LEDC_TIMER_8_BIT)
 
 
-static const char* logTAG = __FILE_NAME__;
+constexpr const char* logTAG = __FILE_NAME__;
 
-bool CPwmControl::initialize()
+void CPwmControl::initialize()
 {
+    scoped_lock<recursive_mutex> lock(rm_);
+
     // Prepare and then apply the LEDC PWM timer configuration
     ledc_timer_config_t ledc_timer = {
         .speed_mode       = LEDC_HIGH_SPEED_MODE,
@@ -30,12 +31,25 @@ bool CPwmControl::initialize()
     };
 
     ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+}
 
-    return true;
+void CPwmControl::initialize(float dc, uint32_t freqHz, uint8_t pin, ledc_timer_t timerNum, ledc_channel_t channel)
+{
+    scoped_lock<recursive_mutex> lock(rm_);
+
+    int pin_ = pin;
+    ledc_timer_t ldc_timer_ = timerNum;
+    ledc_channel_t ldc_channel_ = channel;
+    uint32_t frequency_ = freqHz;  // Default 1kHz
+    float duty_cycle_{0.0f};    // 0-100%
+
+    initialize();
 }
 
 esp_err_t CPwmControl::setDutyCycle(float percent)
 {
+    scoped_lock<recursive_mutex> lock(rm_);
+
     // Validate
     if (percent < 0 || percent > 100) {
         ESP_LOGW(logTAG,"Value DC %f is out of range. It must be range [0...100]! DC is last state.", percent);
@@ -55,6 +69,8 @@ esp_err_t CPwmControl::setDutyCycle(float percent)
 
 esp_err_t CPwmControl::setFrequency(uint32_t freqHz)
 {
+    scoped_lock<recursive_mutex> lock(rm_);
+    
     // Validate
     if (freqHz < 1000 || freqHz > 200000) {
         ESP_LOGW(logTAG,"Value Frequency %d is out of range. The value is not changed.", freqHz);
