@@ -23,6 +23,7 @@
 
 // Локальные заголовки
 #include "pwmconhelp.h"
+#include "wifi-ctrl.h"
 
 
 /*

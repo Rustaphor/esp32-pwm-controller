@@ -33,8 +33,6 @@ class CPwmControl {
     public:
 
         // Constructors, destructors
-        CPwmControl() = default;
-        // explicit CPwmControl(/* parameters like pin, frequency, duty_cycle */);
         ~CPwmControl() { setDutyCycle(0); };
 
         // Public methods
@@ -73,7 +71,7 @@ class CPwmControl {
         ledc_channel_t ldc_channel_{PWM_CHANNEL};
         uint32_t frequency_{PWM_FREQ_DEFAULT};  // Default 1kHz
         float duty_cycle_{0.0f};    // 0-100%
-        mutable recursive_mutex rm_;
+        mutable recursive_mutex rm_ = recursive_mutex();
 };
 
 #endif  // PWM_CONTROL_H
