@@ -22,8 +22,8 @@
 
 
 // Локальные заголовки
-#include "pwmconhelp.h"
-#include "wifi-ctrl.h"
+#include "pwmconexec.h"
+#include "esp-wifi-ctrl.h"
 
 
 /*
@@ -54,7 +54,7 @@ using namespace std::chrono;
 
  void vMyTimer_callback(TimerHandle_t xTimer)
  {
-    ESP_LOGD(TAG, "Numer of iteration %d", 4);
+    // ESP_LOGD(TAG, "Numer of iteration %d", 4);
  }
 
 
@@ -120,6 +120,8 @@ using namespace std::chrono;
 
 extern "C" void app_main(void)
 {
+
+    // wifi_initialize(WIFI_MODE_APSTA);
     // // Create a thread using default values that can run on any core
     // auto cfg = esp_pthread_get_default_config();
     // esp_pthread_set_cfg(&cfg);
