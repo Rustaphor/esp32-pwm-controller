@@ -1,8 +1,10 @@
-#ifndef CONSOLEPWMEXEC_H
-#define CONSOLEPWMEXEC_H
+#ifndef CONSOLEEXEC_H
+#define CONSOLEEXEC_H
 
 #include "pwmctrl.h"
 #include "esp_console.h"
+#include <string>
+#include <map>
 
 // Команда в консоли
 #define CONSOLE_PWMCTRL_CMD_ON "on"
@@ -24,27 +26,36 @@
     TODO: fill detailed description!"
 
 
-class CPwmCtrlConsoleExecutor {
+using namespace std;
+
+class CConsoleExecutor {
 
     friend esp_err_t esp_console_register_pwmcontrol_command();
 
     public:
-        CPwmCtrlConsoleExecutor() = default;
+        CConsoleExecutor(int argc, char **argv) { this->getOpts(argc, argv); }
+
+        inline map<char,string> &getOpts() { return this->mArgs; };
+
+        // Парсер параметров и ключей, начинающихся символом '-'
+        map<char,string> &getOpts(int argc, char **argv);
 
     private:
-        static int command_callback(int argc, char **argv);
+        static int exec_pwmctrl_callback(int argc, char **argv);
 
         constexpr static const esp_console_cmd_t _pwmcmd = {
             .command = CONSOLE_PWMCTRL_COMMAND,
             .help = CONSOLE_PWMCTRL_HELP,           // Развернутое описание по команде help <cmd>
             .hint = CONSOLE_PWMCTRL_HINT,           // Краткая подсказка по командам
-            .func = command_callback
+            .func = exec_pwmctrl_callback
         };
 
+    protected:
+        map<char,string> mArgs;
 };
 
 inline esp_err_t esp_console_register_pwmcontrol_command() {
-    return esp_console_cmd_register(&CPwmCtrlConsoleExecutor::_pwmcmd);
+    return esp_console_cmd_register(&CConsoleExecutor::_pwmcmd);
 }
 
-#endif // CONSOLEPWMEXEC_H
+#endif // CONSOLEEXEC_H
