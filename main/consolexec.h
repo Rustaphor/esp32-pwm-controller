@@ -9,7 +9,7 @@
 // Команда в консоли
 #define CONSOLE_PWMCTRL_CMD_ON "on"
 #define CONSOLE_PWMCTRL_CMD_OFF "off"
-#define CONSOLE_PWMCTRL_COMMAND "pwmcontrol"
+#define CONSOLE_PWMCTRL_COMMAND "pwm"
 #define CONSOLE_PWMCTRL_HINT " <none> ["CONSOLE_PWMCTRL_CMD_ON"|"CONSOLE_PWMCTRL_CMD_OFF"] [-f <XX>] [-d <1-90%>] [-i]\n \
     <none> - display current PWM status. \n \
     TODO: needs to finish desc..."

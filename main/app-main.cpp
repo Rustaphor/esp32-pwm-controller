@@ -57,6 +57,7 @@ using namespace std::chrono;
     // ESP_LOGD(TAG, "Numer of iteration %d", 4);
  }
 
+ CPwmControl PwmCtrl1(PWM_OUTPUT_IO_DEFAULT);
 
 
 // void print_thread_info(const char *extra = nullptr)
@@ -118,8 +119,11 @@ using namespace std::chrono;
 // }
 
 
-extern "C" void app_main(void)
+extern "C" [[noreturn]] void app_main(void)
 {
+
+    // Инициализация ШИМ-контроллера
+    PwmCtrl1.initialize();
 
     // wifi_initialize(WIFI_MODE_APSTA);
     // // Create a thread using default values that can run on any core

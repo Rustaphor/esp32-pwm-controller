@@ -10,6 +10,7 @@
 // Include necessary standard library headers
 #include <cstdint>
 #include <mutex>
+#include <utility>
 #include "driver/ledc.h"
 #include "esp_err.h"
 
@@ -33,44 +34,48 @@ class CPwmControl {
     public:
 
         // Constructors, destructors
+        CPwmControl(int pin, ledc_timer_t timerNum = PWM_TIMER_DEFAULT, ledc_channel_t channel = PWM_CHANNEL);
         ~CPwmControl() { setDutyCycle(0); };
 
         // Public methods
-        void initialize();
-        void initialize(float dc, uint32_t freqHz = PWM_FREQ_DEFAULT, uint8_t pin = PWM_OUTPUT_IO_DEFAULT, ledc_timer_t timerNum = PWM_TIMER_DEFAULT, ledc_channel_t channel = PWM_CHANNEL);
+        esp_err_t initialize(uint32_t freqHz = PWM_FREQ_DEFAULT);
 
         esp_err_t setDutyCycle(float percent);
 
-        esp_err_t setFrequency(uint32_t freqHz);
-
         /// Enable PWM output on the configured pin
-        esp_err_t enable() { return setDutyCycle(duty_cycle_); };
+        esp_err_t enable();
 
         /// Disable PWM output (turns off signal)
-        [[nodiscard]]
-        void disable() { setDutyCycle(0); }
+        esp_err_t disable();
+
+        bool isEnabled() { return enabled_; };
 
         /// Get current duty cycle in percent
-        [[nodiscard]]
-        float getDutyCycle() { return duty_cycle_; }
+        float getDutyCycle();
+
+        pair<uint32_t, uint32_t> getSysDC();
 
         /// Get current frequency in Hz
-        [[nodiscard]]
         uint32_t getFrequency() { return frequency_; }
 
         /// Get the GPIO pin assigned for PWM
-        [[nodiscard]]
         int getPin() const { return pin_; }
 
+        // Update to assign changes
+        esp_err_t update();
+    
     protected:
-            esp_err_t update();
+        esp_err_t setSysDC(uint32_t dc);
 
     private:
-        int pin_{PWM_OUTPUT_IO_DEFAULT};
-        ledc_timer_t ldc_timer_{PWM_TIMER_DEFAULT};
-        ledc_channel_t ldc_channel_{PWM_CHANNEL};
-        uint32_t frequency_{PWM_FREQ_DEFAULT};  // Default 1kHz
-        float duty_cycle_{0.0f};    // 0-100%
+        int pin_;
+        bool enabled_;
+        ledc_timer_t ldc_timer_;
+        ledc_channel_t ldc_channel_;
+        uint32_t frequency_;
+        uint32_t dc_;
+        // float duty_cycle_{0.0f};                // 0-100%
+
         mutable recursive_mutex rm_ = recursive_mutex();
 };
 

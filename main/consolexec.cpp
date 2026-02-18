@@ -1,14 +1,14 @@
 #include "consolexec.h"
 #include "esp_log.h"
 #include <stdint.h>
-
-// For Debug
+#include "pwmctrl.h"
 #include <iostream>
-
-
-
+#include <utility>
 
 static const char* logTAG = __FILE_NAME__;       // Локальный тег логирования модуля
+
+extern CPwmControl PwmCtrl1;
+
 
 map<char, string> &CConsoleExecutor::getOpts(int argc, char **argv)
 {
@@ -55,15 +55,17 @@ int CConsoleExecutor::exec_pwmctrl_callback(int argc, char **argv)
     CConsoleExecutor executor(argc,argv);
 
     // Анализ командной строки
+    bool any_changed = false;
     for (const auto& [key, val] : executor.getOpts()) {
-        cout << "Key: " << key << " value: " << val << endl;
 
         // Обработка команд
         if (val == CONSOLE_PWMCTRL_CMD_ON) {
-            cout << "Command on" << "\n";
+            PwmCtrl1.enable();      // TODO: вынести из цикла единым запуском
+            any_changed = true;
             continue;
         } else if (val == CONSOLE_PWMCTRL_CMD_OFF) {
-            cout << "Command off" << "\n";
+            PwmCtrl1.disable();
+            any_changed = true;
             continue;
         }
 
@@ -75,13 +77,16 @@ int CConsoleExecutor::exec_pwmctrl_callback(int argc, char **argv)
             // Freq parameters
             case 'f':
                 freq = atoi(val.data());
-                cout << "Current f = " << freq << " \n";
+                PwmCtrl1.initialize(freq);
+                any_changed = true;
                 break;
 
             // DC parameters
             case 'd':
                 dc = (float) atof(val.data());
-                cout << "Current dc = " << dc << " \n";
+                PwmCtrl1.setDutyCycle(dc);
+                PwmCtrl1.update();
+                any_changed = true;
                 break;
 
             // Inverse flag
@@ -94,7 +99,21 @@ int CConsoleExecutor::exec_pwmctrl_callback(int argc, char **argv)
                 return ESP_FAIL;
 
         }
-
     }
+
+    if (!any_changed) {
+        cout << "PWM-status: ";
+        if (PwmCtrl1.isEnabled()) {
+            cout << "ON ";
+        } else {
+            cout << "OFF ";
+        }
+
+        PwmCtrl1.update();
+
+        pair<uint32_t,uint32_t> sys_dc = PwmCtrl1.getSysDC();
+        cout << "dc=" << PwmCtrl1.getDutyCycle()*100<< "% (" << sys_dc.first <<'/' << sys_dc.second << ") freq=" << PwmCtrl1.getFrequency() << "Hz pin#=" << PwmCtrl1.getPin() << endl;
+    }
+
     return ESP_OK;
 }
