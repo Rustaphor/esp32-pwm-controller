@@ -81,6 +81,13 @@ menu "This Project"
     endmenu
 
     menu "CLI Console"
+        comment "Console Command Line Interface (CLI) via UART 115200 Kbt."
+
+        config CONSOLE_UART_ENABLED
+            bool "UART Enabled"
+            default y
+            help
+                Switch on/off to use UART-port console. NOTE: Should disable if using GDB Stub debugging. ('GDB Stub' component).
         config CONSOLE_MAX_COMMAND_LINE_LENGTH
             int "Maximum command line length"
             default 1024

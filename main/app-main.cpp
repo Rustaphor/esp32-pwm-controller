@@ -15,31 +15,15 @@
 // #include "esp_pthread.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include "consolexec.h"
 
 #include "esp_log.h"
-#include "esp_console.h"
-#include "cmd_system.h"
 
 
-// Локальные заголовки
-#include "consolexec.h"
-#include "esp-wifi-ctrl.h"
-
-
-/*
- * We warn if a secondary serial console is enabled. A secondary serial console is always output-only and
- * hence not very useful for interactive console applications. If you encounter this warning, consider disabling
- * the secondary serial console in menuconfig unless you know what you are doing.
- */
-#if SOC_USB_SERIAL_JTAG_SUPPORTED
-#if !CONFIG_ESP_CONSOLE_SECONDARY_NONE
-#warning "A secondary serial console is not useful when using the console component. Please disable it in menuconfig."
-#endif
-#endif
 
 
 static const char* TAG = __FILE_NAME__;       // Локальный тег логирования модуля
-#define PROMPT_STR CONFIG_IDF_TARGET
+
 
 using namespace std;
 using namespace std::chrono;
@@ -148,29 +132,10 @@ extern "C" [[noreturn]] void app_main(void)
         ESP_LOGE(TAG,"Error starting timer.");
     }
 
-    // Initialize Console system
-    esp_console_repl_t *repl = NULL;
-    esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
+    // CLI initialization
+    CConsoleExecutor::init();
 
-    /* Prompt to be printed before each line.
-     * This can be customized, made dynamic, etc. */
-    repl_config.prompt = PROMPT_STR ">";
-    repl_config.max_cmdline_length = CONFIG_CONSOLE_MAX_COMMAND_LINE_LENGTH;
-
-    /* Register commands */
-    esp_console_register_help_command();
-    register_system_common();
-    esp_console_register_pwmcontrol_command();
-
-#if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || defined(CONFIG_ESP_CONSOLE_UART_CUSTOM)
-    esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_console_new_repl_uart(&hw_config, &repl_config, &repl));
-#endif
-
-    /* Run Console Thread */
-    ESP_ERROR_CHECK(esp_console_start_repl(repl));
-
-    // Let the main task do something too
+     // Let the main task do something too
     while (true) {
          this_thread::sleep_for(sleep_time);
     }
