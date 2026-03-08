@@ -110,6 +110,7 @@ extern "C" [[noreturn]] void app_main(void)
     PwmCtrl1.initialize();
 
     // wifi_initialize(WIFI_MODE_APSTA);
+    
     // // Create a thread using default values that can run on any core
     // auto cfg = esp_pthread_get_default_config();
     // esp_pthread_set_cfg(&cfg);

@@ -2,6 +2,7 @@
 #define CONSOLEEXEC_H
 
 #include "pwmctrl.h"
+#include "sdkconfig.h"
 #include "esp_console.h"
 #include "cmd_system.h"
 #include "esp-wifi-ctrl.h"

@@ -16,10 +16,14 @@ CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 CONFIG_LWIP_IP_FORWARD=y
 CONFIG_LWIP_IPV4_NAPT=y
 
+# Minimal flash size
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 
-# GDB Stub (только для отладки ч/з UART)
-# NOTE: Conflicts with 'CLI Console' component. Switch off 'CLI Console' component to use it. Add debug information with compiling.
+# Disable Watchdog (for Debug only)
+CONFIG_ESP_TASK_WDT_EN=n
+
+# GDB Stub (debugging via standart UART only. Read wiki for details)
+# NOTE: 1. Conflicts with 'CLI Console' component. Switch off 'CLI Console' component to use it. Add debug information with compiling.
+#       2. Must be disabled in Release ver.
 CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME=n
 CONFIG_ESP_GDBSTUB_SUPPORT_TASKS=y
-# end of GDB Stub
