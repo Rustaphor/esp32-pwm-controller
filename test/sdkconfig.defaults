@@ -1,1 +1,5 @@
 CONFIG_ESP_TASK_WDT_EN=n
+
+# GDB Stub (debugging via standart UART only. Read wiki for details)
+CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME=n
+CONFIG_ESP_GDBSTUB_SUPPORT_TASKS=y
