@@ -18,6 +18,7 @@
 #include "consolexec.h"
 
 #include "esp_log.h"
+#include "CMotorDrive.h"
 
 
 
@@ -42,6 +43,7 @@ using namespace std::chrono;
  }
 
  CPwmControl PwmCtrl1(PWM_OUTPUT_IO_DEFAULT);
+ CMotorDrive motor;
 
 
 // void print_thread_info(const char *extra = nullptr)
@@ -106,8 +108,11 @@ using namespace std::chrono;
 extern "C" [[noreturn]] void app_main(void)
 {
 
-    // Инициализация ШИМ-контроллера
+    /*
+    * Блок первичных инициализаций
+    */
     PwmCtrl1.initialize();
+    motor.initialize();
 
     // wifi_initialize(WIFI_MODE_APSTA);
     
