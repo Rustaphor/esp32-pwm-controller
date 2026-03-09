@@ -1,51 +1,66 @@
 | Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-H21 | ESP32-H4 | ESP32-P4 | ESP32-S2 | ESP32-S3 |
 | ----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | --------- | -------- | -------- | -------- | -------- |
 
-# C++ pthread Example
+# ESP32-PWM-Controller
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+Примерное приложение для управления "конденсаторным" (однофазным) мотором переменного тока (AC-motor) для вентиляторов.
 
-Support for the [C++ threads](http://www.cplusplus.com/reference/thread/thread/) in ESP-IDF is implemented on top of the [ESP-pthread](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/system/esp_pthread.html#overview) component. Thus, C++ threads created using the standard thread class constructor will automatically inherit the current ESP-pthread configuration. This example demonstrates how to leverage the thread configuration functions provided by ESP-pthread (e.g., `esp_pthread_get_default_config()` and `esp_pthread_set_cfg()`) to modify the stack sizes, priorities, names, and core affinities of the C++ threads.
+(Подробная справочная информация представлена в разделе [Wiki](https://github.com/Rustaphor/esp32-pwm-controller/wiki)
 
-**Note: Due to the use of the C++ threads, this example is written in C++ instead of C.**
+<!-- TODO: Добавить описание проекта -->
 
-## How to use example
 
-### Hardware Required
+## Как пользоваться проектом
 
-This example should be able to run on any commonly available ESP32 development board.
+### Требования аппаратного обеспечения
 
-### Configure the project
+Проет работает почти на всех аппаратных платформах [ESP32 от Espressif][1]. Для работы потребуется како-либо из чипов на базе **ESP32** и подключить его через _COM-порт_ (см. ниже).
+
+
+## Сборка проекта из исходников
+
+### 1. Программные требования SDK
+
+Для сборки проекта из исходником понадобится наличие в системе (хосте)[ESP-IDF Toolchain][2]. По завершению установки _toolchain_ дальнейшие инструкции предполагаются в командной строке (терминале) в корневой папке проета.
+
+> [!TIP]
+> **ESP-IDF Toolchain** также содержит все необходимые драйвера для _COM-порта_. Можно выбрать установку драйвер(а) _COM-порта_ при при установке.
+
+
+### 2. Копирование исходников
+
+Удобнее всего с помощью командной строки
+```
+git clone https://github.com/Rustaphor/esp32-pwm-controller.git
+cd esp32-pwm-controller
+```
+(появится директория `esp32-pwm-controller`)
+
+
+### 3. Конфигурирование и сборка проета (опционально)
+
+Конфигурирование проекта через командную строку ниже. Действие необязательно, следующий шаг сконфигурирует автоматически по-умолчанию.
 
 ```
 idf.py menuconfig
 ```
 
-* The default ESP-pthread configuration may also be modified under `Component config > PThreads`
 
-### Build and Flash
+### 4. Build и Flash
 
-Build the project and flash it to the board, then run monitor tool to view serial output:
-
-```
-idf.py -p PORT flash monitor
-```
-
-(Replace PORT with the name of the serial port to use.)
-
-(To exit the serial monitor, type ``Ctrl-]``.)
-
-See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
-
-## Example Output
-
-The following log output should appear when the example runs (note that the bootloader log has been omitted).
+Компилляция, сборка из исходников и последующая прошивка в устройство можно выполнить сразу цепочкой команд:
 
 ```
-...
-I (380) Thread 1: Core id: 0, prio: 5, minimum free stack: 2068 bytes.
-I (0) pthread: This thread (with the default name) may run on any core.Core id: 1, prio: 5, minimum free stack: 2056 bytes.
-I (390) Thread 1: This is the INHERITING thread with the same parameters as our parent, including name. Core id: 0, prio: 5, minimum free stack: 2092 bytes.
-I (410) Thread 2: Core id: 1, prio: 5, minimum free stack: 2088 bytes.
-I (410) main: core id: 0, prio: 1, minimum free stack: 2928 bytes.
+idf.py [-p PORT] build flash monitor
 ```
+Последняя команда `monitor` после прошивки следом подключится к устройству по терминалу _COM-порта_. Для выхода из терминала используйте сочетание клавиш <kbd>Ctrl</kbd>+<kbd>]</kbd>
+
+(подробнее см. в технической документации [Wiki](https://github.com/Rustaphor/esp32-pwm-controller/wiki)
+
+<!-- TODO: добавить описание и фото примеров
+## Ожидаемый вывод в терминале
+-->
+
+
+[1]: https://www.espressif.com/ "Espressif Official Page"
+[2]: https://www.espressif.com/en/products/sdks/esp-idf "ESP-IDF SDK Page"
