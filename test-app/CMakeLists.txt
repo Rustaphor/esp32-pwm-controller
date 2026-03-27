@@ -10,6 +10,9 @@ set(EXTRA_COMPONENT_DIRS "../components")
 # - when using idf.py: idf.py -T xxxxx build
 set(TEST_COMPONENTS "testable" CACHE STRING "List of components to test")
 
+# Предустановка для тетирования на Linux-target машинах FreeRTOS/Linux Simulator
+set(COMPONENTS main)
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 # "Trim" the build. Include the minimal set of components, main, and anything it depends on.
 idf_build_set_property(MINIMAL_BUILD ON)

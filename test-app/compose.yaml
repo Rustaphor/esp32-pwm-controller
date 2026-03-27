@@ -1,0 +1,38 @@
+name: test-app
+
+services:
+
+  # Run interactive
+  default:
+    image: espressif/idf
+    volumes:
+      - type: bind
+        source: ./..
+        target: /home/myproj
+    working_dir: /home/myproj/test-app
+    environment:
+      HOME: /tmp
+
+  # Build test application
+  build:
+    image: espressif/idf
+    command: idf.py build
+    volumes:
+      - type: bind
+        source: ./..
+        target: /home/myproj
+    working_dir: /home/myproj/test-app
+    environment:
+      HOME: /tmp
+
+  # Run test programm
+  test:
+    image: espressif/idf
+    command: idf.py monitor
+    volumes:
+      - type: bind
+        source: ./..
+        target: /home/myproj
+    working_dir: /home/myproj/test-app
+    environment:
+      HOME: /tmp
