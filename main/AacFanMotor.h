@@ -4,11 +4,11 @@
 
 #include <inttypes.h>
 
-typedef enum {
-    AC_MOTOR_OK = 0,
-    AC_MOTOR_FAIL = 0x20,
-    AC_MOTOR_INIT_FALURE = 0x22
-} mot_err_t;
+#define AC_MOTOR_OK                 0
+#define AC_ERR_MOTOR_FAIL           0x200
+#define AC_ERR_MOTOR_INIT_FALURE    0x202
+
+typedef int mot_err_t;
 
 typedef enum {
     AC_MOTOR_IS_STOPPED = 1,
@@ -20,35 +20,11 @@ typedef enum {
 
 
 /**
-* @brief A typical C++ class declaration
+* @brief Абстрактрый класс управления мотором переменного тока с фазосдвигающим конденсатором для вентиллятора
 */
 class AacFanMotor {
 
-protected:
-
-    // /**
-    // * @brief Первичная инициалиация оборудования для упраления мотором
-    // * @details Данный метод вызывается из метода initialize()
-    // */
-    // virtual mot_err_t hw_init() = 0;
-
-    /**
-    * @brief Деинициализация оборудования, например, при переходе в спящий режим
-    * @details Данный метод вызывается из метода deinitialize()
-    */
-    virtual mot_err_t hw_deinit() = 0;
-
-    /**
-     * @brief Запуск мотора с заданной скоростью
-     * @param powerOut - выходная мощность в процентах (мощность PWM) [1...100]
-     */
-    // virtual mot_err_t run(float powerOut) = 0;
-
-    // virtual void stop() = 0;
-
-
 public:
-
 
     AacFanMotor(); // Default initialize constructor
 
@@ -78,6 +54,29 @@ public:
      * @retval AC_MOTOR_IS_STOPPED - мотор остановлен, AC_MOTOR_IS_RUNNING - мотор запущен, AC_MOTOR_IN_FAILURE - ошибка
      */
     mot_status_t get_status();
+
+
+protected:
+
+    // /**
+    // * @brief Первичная инициалиация оборудования для упраления мотором
+    // * @details Данный метод вызывается из метода initialize()
+    // */
+    // virtual mot_err_t hw_init() = 0;
+
+    /**
+    * @brief Деинициализация оборудования, например, при переходе в спящий режим
+    * @details Данный метод вызывается из метода deinitialize()
+    */
+    virtual mot_err_t hw_deinit() = 0;
+
+    /**
+     * @brief Запуск мотора с заданной скоростью
+     * @param powerOut - выходная мощность в процентах (мощность PWM) [1...100]
+     */
+    // virtual mot_err_t run(float powerOut) = 0;
+
+    // virtual void stop() = 0;
 
 private:
 

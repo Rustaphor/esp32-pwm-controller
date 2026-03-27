@@ -22,6 +22,13 @@ CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 # Disable Watchdog (for Debug only)
 CONFIG_ESP_TASK_WDT_EN=n
 
+#
+# ESP-Driver:MCPWM Configurations
+#
+CONFIG_MCPWM_ISR_HANDLER_IN_IRAM=y
+CONFIG_MCPWM_ISR_CACHE_SAFE=y
+CONFIG_MCPWM_CTRL_FUNC_IN_IRAM=y
+
 # GDB Stub (debugging via standart UART only. Read wiki for details)
 # NOTE: 1. Conflicts with 'CLI Console' component. Switch off 'CLI Console' component to use it. Add debug information with compiling.
 #       2. Must be disabled in Release ver.

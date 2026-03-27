@@ -42,7 +42,6 @@ using namespace std::chrono;
     // ESP_LOGD(TAG, "Numer of iteration %d", 4);
  }
 
- CPwmControl PwmCtrl1(PWM_OUTPUT_IO_DEFAULT);
  CMotorDrive motor;
 
 
@@ -111,7 +110,6 @@ extern "C" [[noreturn]] void app_main(void)
     /*
     * Блок первичных инициализаций
     */
-    PwmCtrl1.initialize();
     motor.initialize();
 
     // wifi_initialize(WIFI_MODE_APSTA);

@@ -1,7 +1,6 @@
 #ifndef CONSOLEEXEC_H
 #define CONSOLEEXEC_H
 
-#include "pwmctrl.h"
 #include "sdkconfig.h"
 #include "esp_console.h"
 #include "cmd_system.h"
@@ -19,8 +18,8 @@
     TODO: needs to finish desc..."
 #define CONSOLE_PWMCTRL_HELP "\
     Pulse Width Modulation control command. Controll special output pin to generate PWM.\n \
-    "CONSOLE_PWMCTRL_CMD_ON" command - changes DC level from 0% to last state\n \
-    "CONSOLE_PWMCTRL_CMD_OFF" command - changes DC level from current to 0%\n \
+     command - changes DC level from 0% to last state\n \
+     command - changes DC level from current to 0%\n \
     -f - frequency (30-100) (kHz)\n \
     -d - duty cycle \n \
     -i - inverted output signal \n \
