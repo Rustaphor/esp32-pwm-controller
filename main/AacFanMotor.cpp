@@ -1,4 +1,5 @@
 #include "AacFanMotor.h"
+#include "CSineWaveHelper.h"
 #include <math.h>
 
 // Use IQ18 type, range [-8,192 8,191.999 996 185]
@@ -10,6 +11,8 @@
 // TODO: (Debug only) Удалить после отладки блок ниже
 #include "esp_log.h"
 
+
+using namespace helper;
 
 mot_err_t AacFanMotor::run() {
     if (!this->m_pwrOut) {
@@ -54,7 +57,7 @@ mot_err_t AacFanMotor::make_SineQuaterWaveArray(uint8_t wave_freq)
     mot_err_t result = AC_MOTOR_OK;
 
     // optional<const mot_pwm_val_t*> pMem2;
-    auto pMem1 = helper_CreateNewSineArrayAndFill(wave_freq, 90.0f);
+    auto pMem1 = helper_CreateNewSineDataArray(wave_freq, 90.0f);
     if (!pMem1) {
         result = AC_ERR_MOTOR_NO_MEMORY;
         goto exit_sqwa;
@@ -74,7 +77,7 @@ exit_sqwa:
     return result;
 }
 
-optional<const mot_pwm_val_t *> AacFanMotor::helper_CreateNewSineArrayAndFill(unsigned int length, float maxAngleDeg)
+optional<const mot_pwm_val_t *> AacFanMotor::helper_CreateNewSineDataArray(unsigned int length, float maxAngleDeg)
 {
     void* pTable = malloc(length * sizeof(mot_pwm_val_t));
     if (!pTable) return {};
@@ -82,13 +85,13 @@ optional<const mot_pwm_val_t *> AacFanMotor::helper_CreateNewSineArrayAndFill(un
     _iq dAngle = _IQdiv(_IQ(maxAngleDeg), _IQ(length));      // Минимальный дискретный угол в градусах length / maxAngleDeg
     _iq dAngleRad = _IQmpy(dAngle, _IQ(M_PI / 180.0f));
 
-    _iq CurAngleRad = 0, dcMaxVal = _IQ(_amplitude), val1;
+    _iq CurAngleRad = 0, dcMaxVal = _IQdiv(_IQ(_amplitude), 2), val1;
     // _IQ(wave_freq * 360.0f / _pwm_freq);
 
     for (uint16_t i = 0; i < length; i++) {
-        CurAngleRad += dAngleRad;
         val1 = _IQmpy(_IQsin(CurAngleRad), dcMaxVal);
-        ((mot_pwm_val_t*) pTable)[i] = val1;
+        CurAngleRad += dAngleRad;
+        ((mot_pwm_val_t*) pTable)[i] = (mot_pwm_val_t) _IQtoF(val1);
     }
 
     return (mot_pwm_val_t*) pTable;

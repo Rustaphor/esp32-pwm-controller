@@ -1,24 +1,13 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026
 #pragma once
-
-#include <inttypes.h>
+#include "acmotor_defs.h"
 #include <optional>
 #include <utility>
 #include <semaphore>
 
 
-#define AC_MOTOR_OK                     0
-#define AC_ERR_MOTOR_FAIL               0x200
-#define AC_ERR_MOTOR_INIT_FALURE        0x202
-#define AC_ERR_MOTOR_NO_MEMORY          0x203
-#define AC_ERR_MOTOR_NOT_INITIALIZED    0x204
-
-
-
 typedef int mot_err_t;
-typedef uint16_t mot_pwm_val_t;
-
 typedef enum {
     AC_MOTOR_IS_STOPPED = 1,
     AC_MOTOR_IS_RUNNING,
@@ -29,6 +18,7 @@ typedef enum {
 
 
 using namespace std;
+
 
 /**
 * @brief Абстрактрый класс управления мотором переменного тока с фазосдвигающим конденсатором для вентиллятора
@@ -48,7 +38,7 @@ public:
         _pWave_array.second = pwm_freq / wave_freq; // Длинна массива
     }
 
-    AacFanMotor(uint16_t sine_array_len, mot_pwm_val_t dc100_val) : _amplitude{dc100_val} {
+    AacFanMotor(uint16_t sine_array_len, mot_pwm_val_t amplitude) : _amplitude{amplitude} {
         pCurrentSineValue = nullptr;
         _pWave_array.second = sine_array_len; // Длинна массива
     }
@@ -80,7 +70,7 @@ public:
     mot_status_t get_status();
 
     void test() {
-        auto pSWA = helper_CreateNewSineArrayAndFill(_pWave_array.second, 90.0f);
+        auto pSWA = helper_CreateNewSineDataArray(_pWave_array.second, 90.0f);
 
         if (pSWA.has_value()) {
             _pWave_array.first = (mot_pwm_val_t*) pSWA.value();
@@ -125,7 +115,7 @@ protected:
 private:
 
     _GLIBCXX_NODISCARD
-    optional<const mot_pwm_val_t*> helper_CreateNewSineArrayAndFill(unsigned int length, float maxAngleDeg = 90) noexcept;
+    optional<const mot_pwm_val_t*> helper_CreateNewSineDataArray(unsigned int length, float maxAngleDeg = 90) noexcept;
     static optional<const mot_pwm_val_t*> helper_memAllocDoubleBuffer(const pair<const mot_pwm_val_t*, uint16_t>& array) noexcept;
 
     pair<const mot_pwm_val_t*, uint16_t> _pWave_array = {};
