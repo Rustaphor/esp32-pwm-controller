@@ -33,9 +33,7 @@ using namespace std::chrono;
  #define NUM_TIMERS 1
  TimerHandle_t xTimers[NUM_TIMERS];
  
- const auto sleep_time = seconds {
-    10
-};
+ const auto sleep_time = seconds{1};
 
  void vMyTimer_callback(TimerHandle_t xTimer)
  {
@@ -111,6 +109,8 @@ extern "C" [[noreturn]] void app_main(void)
     * Блок первичных инициализаций
     */
     motor.initialize();
+    this_thread::sleep_for(milliseconds{200});
+    motor.run();
 
     // wifi_initialize(WIFI_MODE_APSTA);
     
@@ -139,8 +139,17 @@ extern "C" [[noreturn]] void app_main(void)
     // CLI initialization
     CConsoleExecutor::init();
 
+    motor.setDC(MOTOR_MCPWM_PERIOD / 4);    // set DC to 50%
+    motor.test();
+
      // Let the main task do something too
     while (true) {
-         this_thread::sleep_for(sleep_time);
+        xSemaphoreTake(motor.hxSem, portMAX_DELAY);
+
+        this_thread::sleep_for(sleep_time);
+
+        ESP_LOGI(TAG, "Count number is %d", motor.count);
+        motor.count = 0;
+
     }
 }

@@ -1,7 +1,15 @@
 #include "AacFanMotor.h"
+#include <math.h>
+
+// Use IQ18 type, range [-8,192 8,191.999 996 185]
+// (This definition should be added before including "IQmathLib.h")
+#define GLOBAL_IQ               18
+#include "IQmathLib.h"
+
 
 // TODO: (Debug only) Удалить после отладки блок ниже
 #include "esp_log.h"
+
 
 mot_err_t AacFanMotor::run() {
     if (!this->m_pwrOut) {
@@ -10,30 +18,89 @@ mot_err_t AacFanMotor::run() {
     return AC_MOTOR_OK;
 }
 
+
 mot_err_t AacFanMotor::deinitialize()
 {
-   
-    auto result = this->hw_deinit();
+    sem.acquire();
 
+    mot_err_t result;
+    if (m_status == AC_MOTOR_NOT_INITIALIZED) {
+        result = AC_ERR_MOTOR_NOT_INITIALIZED;
+        goto end_deinit;
+    }
+
+    result = this->hw_deinit();
+    if (!_pWave_array.first) {
+        free(const_cast<mot_pwm_val_t*>(_pWave_array.first));
+        _pWave_array = {};
+    }
     m_status = AC_MOTOR_NOT_INITIALIZED;
+
+end_deinit:
+    sem.release();
     return result;
 }
 
-AacFanMotor::~AacFanMotor()
-{
-    // TODO: Добавить назначения статуса мотора при уничтожении объекта (fail) без возможности отмены процедуры
-    // TODO: Добавить процедуру остановки мотора и отключения драйвера
-    this->deinitialize();
-}
 
 mot_status_t AacFanMotor::get_status()
 {
     return mot_status_t();
 }
 
-// Private constructor
-AacFanMotor::AacFanMotor() {
 
-    // m_pwrOut = 0;
-    // m_status = AC_MOTOR_NOT_INITIALIZED;
+mot_err_t AacFanMotor::make_SineQuaterWaveArray(uint8_t wave_freq)
+{
+    sem.acquire();
+    mot_err_t result = AC_MOTOR_OK;
+
+    // optional<const mot_pwm_val_t*> pMem2;
+    auto pMem1 = helper_CreateNewSineArrayAndFill(wave_freq, 90.0f);
+    if (!pMem1) {
+        result = AC_ERR_MOTOR_NO_MEMORY;
+        goto exit_sqwa;
+    }
+    _pWave_array.first = (mot_pwm_val_t*) pMem1.value_or(nullptr);
+
+    // result = helper_memAllocDoubleBuffer(&pCurrentSineValue);
+    // if (!pCurrentSineValue) {
+    //      free((void*) pMem1.value());
+    //      result = AC_ERR_MOTOR_NO_MEMORY;
+    //      goto exit_sqwa;
+    // }
+
+
+exit_sqwa:
+    sem.release();
+    return result;
+}
+
+optional<const mot_pwm_val_t *> AacFanMotor::helper_CreateNewSineArrayAndFill(unsigned int length, float maxAngleDeg)
+{
+    void* pTable = malloc(length * sizeof(mot_pwm_val_t));
+    if (!pTable) return {};
+
+    _iq dAngle = _IQdiv(_IQ(maxAngleDeg), _IQ(length));      // Минимальный дискретный угол в градусах length / maxAngleDeg
+    _iq dAngleRad = _IQmpy(dAngle, _IQ(M_PI / 180.0f));
+
+    _iq CurAngleRad = 0, dcMaxVal = _IQ(_amplitude), val1;
+    // _IQ(wave_freq * 360.0f / _pwm_freq);
+
+    for (uint16_t i = 0; i < length; i++) {
+        CurAngleRad += dAngleRad;
+        val1 = _IQmpy(_IQsin(CurAngleRad), dcMaxVal);
+        ((mot_pwm_val_t*) pTable)[i] = val1;
+    }
+
+    return (mot_pwm_val_t*) pTable;
+}
+
+optional<const mot_pwm_val_t*> AacFanMotor::helper_memAllocDoubleBuffer(const pair<const mot_pwm_val_t*, uint16_t>& array)
+{
+    void* pBuf = malloc(array.second);
+    if (!pBuf) {
+        return {};
+    }
+
+    mot_pwm_val_t* pBuff2 = (mot_pwm_val_t*) memcpy(pBuf,  array.first, array.second);
+    return pBuff2;
 }

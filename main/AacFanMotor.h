@@ -3,12 +3,21 @@
 #pragma once
 
 #include <inttypes.h>
+#include <optional>
+#include <utility>
+#include <semaphore>
 
-#define AC_MOTOR_OK                 0
-#define AC_ERR_MOTOR_FAIL           0x200
-#define AC_ERR_MOTOR_INIT_FALURE    0x202
+
+#define AC_MOTOR_OK                     0
+#define AC_ERR_MOTOR_FAIL               0x200
+#define AC_ERR_MOTOR_INIT_FALURE        0x202
+#define AC_ERR_MOTOR_NO_MEMORY          0x203
+#define AC_ERR_MOTOR_NOT_INITIALIZED    0x204
+
+
 
 typedef int mot_err_t;
+typedef uint16_t mot_pwm_val_t;
 
 typedef enum {
     AC_MOTOR_IS_STOPPED = 1,
@@ -19,6 +28,8 @@ typedef enum {
 } mot_status_t;
 
 
+using namespace std;
+
 /**
 * @brief Абстрактрый класс управления мотором переменного тока с фазосдвигающим конденсатором для вентиллятора
 */
@@ -26,7 +37,21 @@ class AacFanMotor {
 
 public:
 
-    AacFanMotor(); // Default initialize constructor
+    /**
+     * @brief Конструктор задания начальных параметров мотора
+     * @param wave_freq - требуемая частота синусоидальной волны мотора в Гц (например, 50)
+     * @param pwm_freq - частота ШИМ в Гц
+     * @param amplitude - максимальное значение (амплитуда) ШИМ-счетчика, при коэффициенте заполнения при DC=100%
+     */
+    AacFanMotor(uint8_t wave_freq, uint32_t pwm_freq, mot_pwm_val_t amplitude) : _amplitude{amplitude} {
+        pCurrentSineValue = nullptr;
+        _pWave_array.second = pwm_freq / wave_freq; // Длинна массива
+    }
+
+    AacFanMotor(uint16_t sine_array_len, mot_pwm_val_t dc100_val) : _amplitude{dc100_val} {
+        pCurrentSineValue = nullptr;
+        _pWave_array.second = sine_array_len; // Длинна массива
+    }
 
     /**
     * @brief Первичная инициалиация оборудования для упраления мотором
@@ -42,8 +67,7 @@ public:
     */
     mot_err_t deinitialize();
 
-    ~AacFanMotor();
-
+  
     /**
      * @brief Запуск мотора с прежней (ранее установленной) мощностью
      */
@@ -54,6 +78,14 @@ public:
      * @retval AC_MOTOR_IS_STOPPED - мотор остановлен, AC_MOTOR_IS_RUNNING - мотор запущен, AC_MOTOR_IN_FAILURE - ошибка
      */
     mot_status_t get_status();
+
+    void test() {
+        auto pSWA = helper_CreateNewSineArrayAndFill(_pWave_array.second, 90.0f);
+
+        if (pSWA.has_value()) {
+            _pWave_array.first = (mot_pwm_val_t*) pSWA.value();
+        }
+    }
 
 
 protected:
@@ -78,10 +110,27 @@ protected:
 
     // virtual void stop() = 0;
 
+    mot_err_t make_SineQuaterWaveArray(uint8_t wave_freq);
+
+
+    __always_inline
+    const pair<const mot_pwm_val_t*, uint16_t> get_sine_val_array() noexcept {
+        return _pWave_array;
+    }
+
+
+    binary_semaphore sem{1};
+    mot_pwm_val_t* pCurrentSineValue;
+
 private:
 
-    mot_status_t m_status = AC_MOTOR_NOT_INITIALIZED;
-    float m_pwrOut = 0.0f;
-    
-};
+    _GLIBCXX_NODISCARD
+    optional<const mot_pwm_val_t*> helper_CreateNewSineArrayAndFill(unsigned int length, float maxAngleDeg = 90) noexcept;
+    static optional<const mot_pwm_val_t*> helper_memAllocDoubleBuffer(const pair<const mot_pwm_val_t*, uint16_t>& array) noexcept;
 
+    pair<const mot_pwm_val_t*, uint16_t> _pWave_array = {};
+    mot_pwm_val_t _amplitude;       // TODO: Убрать и перенести в параметр генерации синусоидального массива
+    uint8_t _wave_freq;
+    mot_status_t m_status = AC_MOTOR_NOT_INITIALIZED;
+    float m_pwrOut = 0.0f; 
+}
