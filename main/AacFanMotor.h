@@ -133,4 +133,4 @@ private:
     uint8_t _wave_freq;
     mot_status_t m_status = AC_MOTOR_NOT_INITIALIZED;
     float m_pwrOut = 0.0f; 
-}
+};
