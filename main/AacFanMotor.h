@@ -69,14 +69,6 @@ public:
      */
     mot_status_t get_status();
 
-    void test() {
-        auto pSWA = helper_CreateNewSineDataArray(_pWave_array.second, 90.0f);
-
-        if (pSWA.has_value()) {
-            _pWave_array.first = (mot_pwm_val_t*) pSWA.value();
-        }
-    }
-
 
 protected:
 
@@ -114,8 +106,8 @@ protected:
 
 private:
 
-    _GLIBCXX_NODISCARD
-    optional<const mot_pwm_val_t*> helper_CreateNewSineDataArray(unsigned int length, float maxAngleDeg = 90) noexcept;
+    // _GLIBCXX_NODISCARD
+    // optional<const mot_pwm_val_t*> helper_CreateNewSineDataArray(unsigned int length, float maxAngleDeg = 90) noexcept;
     static optional<const mot_pwm_val_t*> helper_memAllocDoubleBuffer(const pair<const mot_pwm_val_t*, uint16_t>& array) noexcept;
 
     pair<const mot_pwm_val_t*, uint16_t> _pWave_array = {};

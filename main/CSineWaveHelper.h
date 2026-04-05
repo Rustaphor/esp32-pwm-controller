@@ -9,15 +9,20 @@ using namespace std;
 
 class CSineWaveHelper final {
 
-    float max_angle_degs;
+    float angle_max_degreese_;
+    pair<const mot_pwm_val_t*, const mot_pwm_val_t*> table_buff_;
 
 public:
-    CSineWaveHelper(pair<const mot_pwm_val_t*, const mot_pwm_val_t*>, float max_angle_degrees);
+    CSineWaveHelper(pair<const mot_pwm_val_t*, const mot_pwm_val_t*> &hPair, float max_angle_degrees);
+    CSineWaveHelper(const mot_pwm_val_t* const pStart, unsigned int offset, float max_angle_degrees);
 
-    uint32_t getOffset();
-    void fillSineWave(mot_pwm_val_t amplitude);
-    const mot_pwm_val_t* copyBuffer(pair<const mot_pwm_val_t*, const mot_pwm_val_t*> out_buff);
+    inline unsigned int getOffset() {
+        return table_buff_.second - table_buff_.first;
+    }
 
+    unsigned int fillSineWave(mot_pwm_val_t amplitude);
+    void copyBuffer(const mot_pwm_val_t* pOutBuff);
+    
 };
 
 };

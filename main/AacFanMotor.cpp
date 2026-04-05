@@ -56,13 +56,13 @@ mot_err_t AacFanMotor::make_SineQuaterWaveArray(uint8_t wave_freq)
     sem.acquire();
     mot_err_t result = AC_MOTOR_OK;
 
-    // optional<const mot_pwm_val_t*> pMem2;
-    auto pMem1 = helper_CreateNewSineDataArray(wave_freq, 90.0f);
-    if (!pMem1) {
-        result = AC_ERR_MOTOR_NO_MEMORY;
-        goto exit_sqwa;
-    }
-    _pWave_array.first = (mot_pwm_val_t*) pMem1.value_or(nullptr);
+    // // optional<const mot_pwm_val_t*> pMem2;
+    // auto pMem1 = helper_CreateNewSineDataArray(wave_freq, 90.0f);
+    // if (!pMem1) {
+    //     result = AC_ERR_MOTOR_NO_MEMORY;
+    //     goto exit_sqwa;
+    // }
+    // _pWave_array.first = (mot_pwm_val_t*) pMem1.value_or(nullptr);
 
     // result = helper_memAllocDoubleBuffer(&pCurrentSineValue);
     // if (!pCurrentSineValue) {
@@ -72,30 +72,11 @@ mot_err_t AacFanMotor::make_SineQuaterWaveArray(uint8_t wave_freq)
     // }
 
 
-exit_sqwa:
+// exit_sqwa:
     sem.release();
     return result;
 }
 
-optional<const mot_pwm_val_t *> AacFanMotor::helper_CreateNewSineDataArray(unsigned int length, float maxAngleDeg)
-{
-    void* pTable = malloc(length * sizeof(mot_pwm_val_t));
-    if (!pTable) return {};
-
-    _iq dAngle = _IQdiv(_IQ(maxAngleDeg), _IQ(length));      // Минимальный дискретный угол в градусах length / maxAngleDeg
-    _iq dAngleRad = _IQmpy(dAngle, _IQ(M_PI / 180.0f));
-
-    _iq CurAngleRad = 0, dcMaxVal = _IQdiv(_IQ(_amplitude), 2), val1;
-    // _IQ(wave_freq * 360.0f / _pwm_freq);
-
-    for (uint16_t i = 0; i < length; i++) {
-        val1 = _IQmpy(_IQsin(CurAngleRad), dcMaxVal);
-        CurAngleRad += dAngleRad;
-        ((mot_pwm_val_t*) pTable)[i] = (mot_pwm_val_t) _IQtoF(val1);
-    }
-
-    return (mot_pwm_val_t*) pTable;
-}
 
 optional<const mot_pwm_val_t*> AacFanMotor::helper_memAllocDoubleBuffer(const pair<const mot_pwm_val_t*, uint16_t>& array)
 {

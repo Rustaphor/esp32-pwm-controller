@@ -140,7 +140,6 @@ extern "C" [[noreturn]] void app_main(void)
     CConsoleExecutor::init();
 
     motor.setDC(MOTOR_MCPWM_PERIOD / 4);    // set DC to 50%
-    motor.test();
 
      // Let the main task do something too
     while (true) {
