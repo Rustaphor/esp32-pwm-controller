@@ -7,19 +7,31 @@ services:
     image: espressif/idf
     volumes:
       - type: bind
-        source: ./..
+        source: .
         target: /home/myproj
-    working_dir: /home/myproj/test-app
+    working_dir: /home/myproj
     environment:
       HOME: /tmp
 
-  # Build test application
+  # Build main application
   build:
     image: espressif/idf
     command: idf.py build
     volumes:
       - type: bind
-        source: ./..
+        source: .
+        target: /home/myproj
+    working_dir: /home/myproj
+    environment:
+      HOME: /tmp
+
+  # Build test application
+  test_build:
+    image: espressif/idf
+    command: idf.py build
+    volumes:
+      - type: bind
+        source: .
         target: /home/myproj
     working_dir: /home/myproj/test-app
     environment:
@@ -31,8 +43,8 @@ services:
     command: idf.py monitor
     volumes:
       - type: bind
-        source: ./..
+        source: .
         target: /home/myproj
     working_dir: /home/myproj/test-app
     environment:
-      HOME: /tmp
+        HOME: /tmp
