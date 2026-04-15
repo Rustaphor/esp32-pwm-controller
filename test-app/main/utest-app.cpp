@@ -13,6 +13,7 @@
 
 static void print_banner(const char* text);
 
+extern "C"
 void app_main(void)
 {
     /* These are the different ways of running registered tests.
