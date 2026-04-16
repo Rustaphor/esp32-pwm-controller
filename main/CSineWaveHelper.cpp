@@ -7,8 +7,6 @@
 #include "IQmathLib.h"
 
 
-helper::CSineWaveHelper::CSineWaveHelper(pair<const mot_pwm_val_t *, const mot_pwm_val_t *> &hPair, float max_angle_degrees)
-    : table_buff_{hPair}, angle_max_degreese_{max_angle_degrees} {}
 
 helper::CSineWaveHelper::CSineWaveHelper(const mot_pwm_val_t *const pStart, unsigned int offset, float max_angle_degrees) : angle_max_degreese_{max_angle_degrees} {
     table_buff_.first = pStart;
@@ -28,7 +26,7 @@ unsigned int helper::CSineWaveHelper::fillSineWave(mot_pwm_val_t amplitude)
     
     mot_pwm_val_t* pCurrent = const_cast<mot_pwm_val_t*>(table_buff_.first); // Set pointer to start of buffer
 
-    while (pCurrent <= table_buff_.second) {
+    while (pCurrent < table_buff_.second) {
         val = _IQmpy(_IQsin(CurAngleRad), dcMaxVal);
         *pCurrent = (mot_pwm_val_t) _IQtoF(val);
         CurAngleRad += dAngleRad; pCurrent++;
