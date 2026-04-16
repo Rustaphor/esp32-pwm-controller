@@ -1,0 +1,11 @@
+## IDF Component Manager Manifest File
+dependencies:
+  ## Required IDF version
+  idf:
+    version: ">=5.0"
+
+# NOTE! It's link to managed component in main application. First to download one you have to configure main application!
+  espressif/iqmath:
+    path: ../../managed_components/espressif__iqmath
+
+

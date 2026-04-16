@@ -14,4 +14,5 @@ set(TEST_COMPONENTS "testable" CACHE STRING "List of components to test")
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 # "Trim" the build. Include the minimal set of components, main, and anything it depends on.
 idf_build_set_property(MINIMAL_BUILD ON)
+idf_build_set_property(REQUIRES "${PROJECT_DIR}/../main/" APPEND)
 project(unit-test-app)

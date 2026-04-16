@@ -32,6 +32,11 @@ void app_main(void)
     unity_run_tests_by_tag("[mean]", false);
     UNITY_END();
 
+    print_banner("Running tests with [acfan] tag");
+    UNITY_BEGIN();
+    unity_run_tests_by_tag("[acfan]", false);
+    UNITY_END();
+
     print_banner("Running tests without [fails] tag");
     UNITY_BEGIN();
     unity_run_tests_by_tag("[fails]", true);
