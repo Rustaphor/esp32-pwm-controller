@@ -12,6 +12,13 @@ cmake_minimum_required(VERSION 3.16)
 # set(TEST_COMPONENTS "testable" CACHE STRING "List of components to test")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-# "Trim" the build. Include the minimal set of components, main, and anything it depends on.
 idf_build_set_property(MINIMAL_BUILD ON)
+
+if(${IDF_TARGET} STREQUAL "linux")
+    # set(COMPONENTS main)
+    # list(APPEND EXTRA_COMPONENT_DIRS "$ENV{IDF_PATH}/tools/mocks/freertos/")
+endif()
+
+# "Trim" the build. Include the minimal set of components, main, and anything it depends on.
+
 project(unit-testapp)
