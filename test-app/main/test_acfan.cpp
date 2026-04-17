@@ -1,8 +1,6 @@
 #include "unity.h"
 #include "CSineWaveHelper.h"
 #include <math.h>
-#include <numbers>
-#include <iostream>
 
 using namespace std;
 using namespace helper;

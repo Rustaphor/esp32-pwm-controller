@@ -29,17 +29,13 @@ public:
 
     /**
      * @brief Конструктор задания начальных параметров мотора
-     * @param wave_freq - требуемая частота синусоидальной волны мотора в Гц (например, 50)
+     * @param sine_wave_freq - требуемая частота синусоидальной волны мотора в Гц (например, 50)
      * @param pwm_freq - частота ШИМ в Гц
      * @param amplitude - максимальное значение (амплитуда) ШИМ-счетчика, при коэффициенте заполнения при DC=100%
      */
-    AacFanMotor(uint8_t wave_freq, uint32_t pwm_freq, mot_pwm_val_t amplitude) : _amplitude{amplitude} {
-        pCurrentSineValue = nullptr;
-        _pWave_array.second = pwm_freq / wave_freq; // Длинна массива
-    }
+    AacFanMotor(uint8_t sine_wave_freq, uint32_t pwm_freq, mot_pwm_val_t amplitude) : _wave_freq{sine_wave_freq}, _pwm_freq{pwm_freq}, _amplitude{amplitude} {}
 
     AacFanMotor(uint16_t sine_array_len, mot_pwm_val_t amplitude) : _amplitude{amplitude} {
-        pCurrentSineValue = nullptr;
         _pWave_array.second = sine_array_len; // Длинна массива
     }
 
@@ -92,27 +88,29 @@ protected:
 
     // virtual void stop() = 0;
 
-    mot_err_t make_SineQuaterWaveArray(uint8_t wave_freq);
+    mot_err_t make_SineQuaterWaveArray(uint8_t sine_wave_freq);
 
 
     __always_inline
-    const pair<const mot_pwm_val_t*, uint16_t> get_sine_val_array() noexcept {
-        return _pWave_array;
-    }
+    const pair<const mot_pwm_val_t*, const mot_pwm_val_t*> getSineValArray() noexcept { return _hSineValArray1; }
 
 
     binary_semaphore sem{1};
-    mot_pwm_val_t* pCurrentSineValue;
+    // mot_pwm_val_t* pCurrentSineValue = nullptr;
 
 private:
 
     // _GLIBCXX_NODISCARD
-    // optional<const mot_pwm_val_t*> helper_CreateNewSineDataArray(unsigned int length, float maxAngleDeg = 90) noexcept;
     static optional<const mot_pwm_val_t*> helper_memAllocDoubleBuffer(const pair<const mot_pwm_val_t*, uint16_t>& array) noexcept;
 
-    pair<const mot_pwm_val_t*, uint16_t> _pWave_array = {};
-    mot_pwm_val_t _amplitude;       // TODO: Убрать и перенести в параметр генерации синусоидального массива
     uint8_t _wave_freq;
-    mot_status_t m_status = AC_MOTOR_NOT_INITIALIZED;
+    uint32_t _pwm_freq;
+    mot_pwm_val_t _amplitude;       // TODO: Убрать и перенести в параметр генерации синусоидального массива
     float m_pwrOut = 0.0f; 
+
+    pair<const mot_pwm_val_t*, uint16_t> _pWave_array = {};
+    pair<const mot_pwm_val_t*, const mot_pwm_val_t*> _hSineValArray1;
+    pair<const mot_pwm_val_t*, const mot_pwm_val_t*> _hSineValArray2;
+    pair<pair<const mot_pwm_val_t*, const mot_pwm_val_t*>&, pair<const mot_pwm_val_t*, const mot_pwm_val_t*>&> _dblBuf{_hSineValArray1, _hSineValArray2};
+    mot_status_t m_status = AC_MOTOR_NOT_INITIALIZED;
 };
