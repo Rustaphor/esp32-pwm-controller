@@ -21,22 +21,65 @@ mot_err_t AacFanMotor::run() {
     return AC_MOTOR_OK;
 }
 
+mot_err_t AacFanMotor::initialize()
+{
+    sem.acquire();
+    mot_err_t result;
+
+    optional<const mot_pwm_val_t*> op1, op2;
+    uint16_t sine_array_len = sineArrayLength(_sine_freq);
+    op1 = alloc_SineWaveBuffer(_hSineValArray1, sine_array_len);
+    if (!op1.has_value()) {
+        result = AC_ERR_MOTOR_NO_MEMORY;
+        goto end_init;
+    }
+
+    op2 = alloc_SineWaveBuffer(_hSineValArray2, sine_array_len);
+    if (!op2.has_value()) {
+        result = AC_ERR_MOTOR_NO_MEMORY;
+        goto end_init_free1;
+    }
+
+    memcpy((void*) _hSineValArray2.first, (void*) _hSineValArray1.first, _hSineValArray1.second - _hSineValArray1.first);
+
+    result = hw_init();
+    if (result != AC_MOTOR_OK) { goto end_init_free2; }
+    m_status = AC_MOTOR_INITIALIZED;
+    goto end_init;
+
+end_init_free2:
+    free((void*) _hSineValArray2.first);
+    _hSineValArray2 = {};       
+end_init_free1:
+    free((void*) _hSineValArray1.first);
+    _hSineValArray1 = {};       
+end_init:
+    sem.release();
+    return result;
+}
 
 mot_err_t AacFanMotor::deinitialize()
 {
     sem.acquire();
-
     mot_err_t result;
+
+    // Проверка инициализирован ли мотор
     if (m_status == AC_MOTOR_NOT_INITIALIZED) {
         result = AC_ERR_MOTOR_NOT_INITIALIZED;
         goto end_deinit;
     }
 
-    result = this->hw_deinit();
-    if (!_pWave_array.first) {
-        free(const_cast<mot_pwm_val_t*>(_pWave_array.first));
-        _pWave_array = {};
+    result = hw_deinit();
+    if (_hSineValArray1.first) {
+        free(const_cast<mot_pwm_val_t*>(_hSineValArray1.first));
+        _hSineValArray1 = {};
     }
+    if (_hSineValArray2.first) {
+        free(const_cast<mot_pwm_val_t*>(_hSineValArray2.first));
+        _hSineValArray2 = {};
+    }
+    _dblBuf.first = _hSineValArray1;
+    _dblBuf.second = _hSineValArray2;
     m_status = AC_MOTOR_NOT_INITIALIZED;
 
 end_deinit:
@@ -87,4 +130,11 @@ optional<const mot_pwm_val_t*> AacFanMotor::helper_memAllocDoubleBuffer(const pa
 
     mot_pwm_val_t* pBuff2 = (mot_pwm_val_t*) memcpy(pBuf,  array.first, array.second);
     return pBuff2;
+}
+
+optional<const mot_pwm_val_t *> AacFanMotor::realloc_SineWaveBuffer(pair<const mot_pwm_val_t *, const mot_pwm_val_t *> &hArray, uint16_t sine_array_len) noexcept
+{
+    hArray.first = (mot_pwm_val_t*) realloc((void*) hArray.first, sine_array_len * sizeof(mot_pwm_val_t));
+    hArray.second = hArray.first + sine_array_len;
+    return hArray.first;
 }
