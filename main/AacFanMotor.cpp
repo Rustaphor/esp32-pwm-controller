@@ -2,6 +2,7 @@
 #include "CSineWaveHelper.h"
 #include <math.h>
 
+
 // Use IQ18 type, range [-8,192 8,191.999 996 185]
 // (This definition should be added before including "IQmathLib.h")
 #define GLOBAL_IQ               18
@@ -27,7 +28,7 @@ mot_err_t AacFanMotor::initialize()
     mot_err_t result;
 
     optional<const mot_pwm_val_t*> op1, op2;
-    uint16_t sine_array_len = sineArrayLength(_sine_freq);
+    uint16_t sine_array_len = calc_SineArrayLength(_sine_freq);
     op1 = alloc_SineWaveBuffer(_hSineValArray1, sine_array_len);
     if (!op1.has_value()) {
         result = AC_ERR_MOTOR_NO_MEMORY;
@@ -42,7 +43,7 @@ mot_err_t AacFanMotor::initialize()
 
     memcpy((void*) _hSineValArray2.first, (void*) _hSineValArray1.first, _hSineValArray1.second - _hSineValArray1.first);
 
-    result = hw_init();
+    result = this->hw_init();
     if (result != AC_MOTOR_OK) { goto end_init_free2; }
     m_status = AC_MOTOR_INITIALIZED;
     goto end_init;
@@ -88,13 +89,7 @@ end_deinit:
 }
 
 
-mot_status_t AacFanMotor::get_status()
-{
-    return mot_status_t();
-}
-
-
-mot_err_t AacFanMotor::make_SineQuaterWaveArray(uint8_t wave_freq)
+mot_err_t AacFanMotor::make_SineQuaterWaveArray(mot_sine_freq_t wave_freq)
 {
     sem.acquire();
     mot_err_t result = AC_MOTOR_OK;

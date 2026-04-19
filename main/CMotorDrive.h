@@ -60,7 +60,7 @@ public:
 
 protected:
     mot_err_t hw_enable(bool en);
-    mot_err_t hw_deinit();
+    mot_err_t hw_deinit() override;
     
 private:
     mcpwm_timer_handle_t hTimer_;

@@ -1,6 +1,6 @@
 set(MAINAPP_DIR "${PROJECT_DIR}/../main")
 
-idf_component_register(SRCS "utest-app.cpp" "test_acfan.cpp" "${MAINAPP_DIR}/CSineWaveHelper.cpp"
+idf_component_register(SRCS "CTestAacFanMotor.cpp" "utest-app.cpp" "test_acfan.cpp" "${MAINAPP_DIR}/CSineWaveHelper.cpp" "${MAINAPP_DIR}/AacFanMotor.cpp"
                     PRIV_REQUIRES unity cmock
                     INCLUDE_DIRS "." ${MAINAPP_DIR}
                     WHOLE_ARCHIVE)

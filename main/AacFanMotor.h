@@ -5,6 +5,7 @@
 #include <optional>
 #include <utility>
 #include <semaphore>
+#include <cstdlib>
 
 
 typedef int mot_err_t;
@@ -15,7 +16,7 @@ typedef enum {
     AC_MOTOR_IS_BUSY,
     AC_MOTOR_INITIALIZED,
     AC_MOTOR_NOT_INITIALIZED
-} mot_status_t;
+} mot_state_t;
 
 
 using namespace std;
@@ -33,11 +34,7 @@ public:
      * @param sine_wave_freq - требуемая частота синусоидальной волны мотора в Гц (например, 50)
      * @param amplitude - максимальное значение (амплитуда) ШИМ-счетчика, при коэффициенте заполнения при DC=100%
      */
-    AacFanMotor(uint8_t sine_wave_freq, mot_pwm_val_t amplitude) : _sine_freq{sine_wave_freq}, _amplitude{amplitude} {}
-
-
-    ~AacFanMotor() { deinitialize(); }
-
+    AacFanMotor(mot_sine_freq_t sine_wave_freq, mot_pwm_val_t amplitude) : _sine_freq{sine_wave_freq}, _amplitude{amplitude} {}
 
     /**
     * @brief Первичная инициалиация оборудования для упраления мотором
@@ -60,10 +57,17 @@ public:
     mot_err_t run();
 
     /**
-     * @brief Получение текущего статуса мотора. Потокобезопасно.
+     * @brief Получение текущего состояния мотора. Потокобезопасно.
      * @retval AC_MOTOR_IS_STOPPED - мотор остановлен, AC_MOTOR_IS_RUNNING - мотор запущен, AC_MOTOR_IN_FAILURE - ошибка
      */
-    mot_status_t get_status();
+    mot_state_t getCurrentState() { return m_status; };
+
+    /**
+     * @brief Set motor speed/power
+     * @param powerOut - power output as percentage (0-100)
+     * @return AC_MOTOR_OK on success
+     */
+    mot_err_t setPower(float powerOut);
 
 
 protected:
@@ -81,6 +85,12 @@ protected:
     virtual mot_err_t hw_deinit() = 0;
 
     /**
+     * @brief Функция вычисления длинны массива значений синуса
+     * @example PWM_FREQ / MOTOR_WAVE_FREQ; PWM_FREQ / sine_wave_freq 
+     */
+    virtual uint16_t calc_SineArrayLength(mot_sine_freq_t sine_wave_freq) noexcept = 0;
+
+    /**
      * @brief Запуск мотора с заданной скоростью
      * @param powerOut - выходная мощность в процентах (мощность PWM) [1...100]
      */
@@ -88,16 +98,14 @@ protected:
 
     // virtual void stop() = 0;
 
-    virtual uint16_t sineArrayLength(uint8_t sine_wave_freq) noexcept = 0;
-
-    mot_err_t make_SineQuaterWaveArray(uint8_t sine_wave_freq);
+    mot_err_t make_SineQuaterWaveArray(mot_sine_freq_t sine_wave_freq);
 
 
     __always_inline
     const pair<const mot_pwm_val_t*, const mot_pwm_val_t*> getSineValArray() noexcept { return _hSineValArray1; }
 
 
-    binary_semaphore sem{1};
+    mutable binary_semaphore sem{1};
     // mot_pwm_val_t* pCurrentSineValue = nullptr;
 
 private:
@@ -106,10 +114,7 @@ private:
     static optional<const mot_pwm_val_t*> helper_memAllocDoubleBuffer(const pair<const mot_pwm_val_t*, uint16_t>& array) noexcept;
     
     _GLIBCXX_NODISCARD
-    optional<const mot_pwm_val_t*> alloc_SineWaveBuffer(pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& hArray, uint8_t sine_wave_freq, uint32_t pwm_freq) noexcept;
-
-    _GLIBCXX_NODISCARD
-    inline optional<const mot_pwm_val_t*> alloc_SineWaveBuffer(pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& hArray, uint16_t sine_array_len) noexcept {
+    inline optional<const mot_pwm_val_t*> alloc_SineWaveBuffer(pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& hArray, mot_sine_freq_t sine_array_len) noexcept {
         hArray.first = (mot_pwm_val_t*) malloc(sine_array_len * sizeof(mot_pwm_val_t));
         hArray.second = hArray.first + sine_array_len;
         return hArray.first;
@@ -119,12 +124,12 @@ private:
     optional<const mot_pwm_val_t*> realloc_SineWaveBuffer(pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& hArray, uint16_t sine_array_len) noexcept;
 
 
-    uint8_t _sine_freq;
+    mot_sine_freq_t _sine_freq;
     mot_pwm_val_t _amplitude;       // TODO: Убрать и перенести в параметр генерации синусоидального массива
     float m_pwrOut = 0.0f; 
 
     pair<const mot_pwm_val_t*, const mot_pwm_val_t*> _hSineValArray1;
     pair<const mot_pwm_val_t*, const mot_pwm_val_t*> _hSineValArray2;
     const pair<pair<const mot_pwm_val_t*, const mot_pwm_val_t*>&, pair<const mot_pwm_val_t*, const mot_pwm_val_t*>&> _dblBuf{_hSineValArray1, _hSineValArray2};
-    mot_status_t m_status = AC_MOTOR_NOT_INITIALIZED;
+    mot_state_t m_status = AC_MOTOR_NOT_INITIALIZED;
 };

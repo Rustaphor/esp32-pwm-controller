@@ -15,6 +15,7 @@
 
 // Type definitions
 typedef uint16_t mot_pwm_val_t;
+typedef uint8_t mot_sine_freq_t;
 
 
 

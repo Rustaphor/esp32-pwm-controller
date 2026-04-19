@@ -1,6 +1,8 @@
 #include "unity.h"
-#include "CSineWaveHelper.h"
 #include <math.h>
+#include "CSineWaveHelper.h"
+#include "CTestAacFanMotor.h"
+#include <iostream>
 
 using namespace std;
 using namespace helper;
@@ -58,7 +60,7 @@ TEST_CASE("Test correct calculation Sine Wave Values 0-180 degreese and 2d const
     // Условия теста
     const float MaxAngle = 180.0f;                   // Maximum Degrees
     const mot_pwm_val_t MaxValue = 7293U;           // Амплитуда квантования
-    const mot_pwm_val_t Offset = 1700U;              // Length of Sine Wave array
+    const mot_pwm_val_t Offset = 520U;              // Length of Sine Wave array
     const float relTolerance = 1.0f;                // Точность расхождения в процентах
     
 
@@ -85,3 +87,14 @@ TEST_CASE("Test correct calculation Sine Wave Values 0-180 degreese and 2d const
     delete[] p1;
 }
 
+TEST_CASE("Test AacFanMotor class init-deinit", "[acfan]")
+{
+    CTestAacFanMotor motor;
+    TEST_ASSERT_EQUAL(AC_MOTOR_NOT_INITIALIZED, motor.getCurrentState());
+
+    motor.initialize();
+    TEST_ASSERT_EQUAL(AC_MOTOR_INITIALIZED, motor.getCurrentState());
+
+    motor.deinitialize();
+    TEST_ASSERT_EQUAL(AC_MOTOR_NOT_INITIALIZED, motor.getCurrentState());
+}
