@@ -17,6 +17,10 @@
 typedef uint16_t mot_pwm_val_t;
 typedef uint8_t mot_sine_freq_t;
 
+// Задание константы максимального угла расчета синуса. Обычно 1/4 (90 град) или 1/2 (180 град) волны.
+#ifndef ACMOTOR_SINE_MAX_ANGLE
+#define ACMOTOR_SINE_MAX_ANGLE          90.0f
+#endif
 
 
 #endif // ACMOTOR_DEFS_H
