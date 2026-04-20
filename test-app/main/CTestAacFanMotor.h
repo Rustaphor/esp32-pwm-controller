@@ -21,11 +21,11 @@ public:
     size_t calc_SineBufferLength(mot_sine_freq_t sine_wave_freq) noexcept override;
 
     pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& get_SineBuffer() noexcept {
-        return const_cast<pair<const mot_pwm_val_t*, const mot_pwm_val_t*>&>(getCurrentSineBuff());
+        return const_cast<pair<const mot_pwm_val_t*, const mot_pwm_val_t*>&>(getSineBuffer());
     };
 
     void test_fillSineBuffer(mot_pwm_val_t max_value, float max_angle) noexcept {
-        fill_SineWaveBuffer(const_cast<pair<const mot_pwm_val_t*, const mot_pwm_val_t*>&>(getCurrentSineBuff()),max_value,max_angle);
+        fill_SineWaveBuffer(const_cast<pair<const mot_pwm_val_t*, const mot_pwm_val_t*>&>(getSineBuffer()),max_value,max_angle);
     };
 
 protected:

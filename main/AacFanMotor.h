@@ -105,7 +105,7 @@ protected:
     size_t fill_SineWaveBuffer(pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& hBuff, mot_pwm_val_t max_value, float max_angle = ACMOTOR_SINE_MAX_ANGLE) noexcept;
 
     __always_inline
-    const pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& getCurrentSineBuff() noexcept { return _hCurrentBuff; }
+    const pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& getSineBuffer() noexcept { return _hSineWaveBuffer; }
 
 
     mutable binary_semaphore sem{1};
@@ -128,9 +128,6 @@ private:
     mot_pwm_val_t _amplitude;       // TODO: Убрать и перенести в параметр генерации синусоидального массива
     float m_pwrOut = 0.0f;
 
-    pair<const mot_pwm_val_t*, const mot_pwm_val_t*> _hSineValArray1;
-    pair<const mot_pwm_val_t*, const mot_pwm_val_t*> _hSineValArray2;
-    pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& _hCurrentBuff{_hSineValArray1};
-    // const pair<pair<const mot_pwm_val_t*, const mot_pwm_val_t*>&, pair<const mot_pwm_val_t*, const mot_pwm_val_t*>&> _dblBuf{_hSineValArray1, _hSineValArray2};
+    pair<const mot_pwm_val_t*, const mot_pwm_val_t*> _hSineWaveBuffer;
     mot_state_t m_status = AC_MOTOR_NOT_INITIALIZED;
 };

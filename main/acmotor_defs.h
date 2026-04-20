@@ -22,5 +22,14 @@ typedef uint8_t mot_sine_freq_t;
 #define ACMOTOR_SINE_MAX_ANGLE          90.0f
 #endif
 
+/**
+ * @brief Минимальная частота синусоидальной генерируемой волны мотора в Гц (например, 25)
+ * @param ACMOTOR_SINE_MIN_FREQ
+ * @details Глобальный параметр требуется для расчета максимального размера буфера значений синуса в сэмпле. Максимальное значение достигается при минимальной частоте.
+ */
+#ifndef ACMOTOR_SINE_MIN_FREQ
+#define ACMOTOR_SINE_MIN_FREQ          25
+#endif
+
 
 #endif // ACMOTOR_DEFS_H

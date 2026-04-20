@@ -1,5 +1,4 @@
 #include "AacFanMotor.h"
-#include "CSineWaveHelper.h"
 #include <math.h>
 
 
@@ -8,8 +7,6 @@
 #define GLOBAL_IQ               18
 #include "IQmathLib.h"
 
-
-using namespace helper;
 
 mot_err_t AacFanMotor::run() {
     if (!this->m_pwrOut) {
@@ -25,31 +22,20 @@ mot_err_t AacFanMotor::initialize()
 
     optional<const mot_pwm_val_t*> op1, op2;
     uint16_t sine_array_len = calc_SineBufferLength(_sine_freq);
-    op1 = alloc_WaveBuffer(_hSineValArray1, sine_array_len);
+    op1 = alloc_WaveBuffer(_hSineWaveBuffer, sine_array_len);
     if (!op1.has_value()) {
         result = AC_ERR_MOTOR_NO_MEMORY;
         goto end_init;
     }
 
-    op2 = alloc_WaveBuffer(_hSineValArray2, sine_array_len);
-    if (!op2.has_value()) {
-        result = AC_ERR_MOTOR_NO_MEMORY;
-        goto end_init_free1;
-    }
-
-    _hCurrentBuff = _hSineValArray1;
-
     result = this->hw_init();
-    if (result != AC_MOTOR_OK) { goto end_init_free2; }
+    if (result != AC_MOTOR_OK) { goto end_init_memfree; }
     m_status = AC_MOTOR_INITIALIZED;
     goto end_init;
 
-end_init_free2:
-    free((void*) _hSineValArray2.first);
-    _hSineValArray2 = {};       
-end_init_free1:
-    free((void*) _hSineValArray1.first);
-    _hSineValArray1 = {};       
+end_init_memfree:
+    free((void*) _hSineWaveBuffer.first);
+    _hSineWaveBuffer = {};       
 end_init:
     sem.release();
     return result;
@@ -68,13 +54,9 @@ mot_err_t AacFanMotor::deinitialize()
     // TODO: (else if) Выполнить проврки других состояний мотора и если мотор не остановлен, выполнить процедуру аваринйной остановки
 
     result = hw_deinit();
-    if (_hSineValArray1.first) {
-        free(const_cast<mot_pwm_val_t*>(_hSineValArray1.first));
-        _hSineValArray1 = {};
-    }
-    if (_hSineValArray2.first) {
-        free(const_cast<mot_pwm_val_t*>(_hSineValArray2.first));
-        _hSineValArray2 = {};
+    if (_hSineWaveBuffer.first) {
+        free(const_cast<mot_pwm_val_t*>(_hSineWaveBuffer.first));
+        _hSineWaveBuffer = {};
     }
     m_status = AC_MOTOR_NOT_INITIALIZED;
 
@@ -101,7 +83,7 @@ size_t AacFanMotor::fill_SineWaveBuffer(pair<const mot_pwm_val_t *, const mot_pw
 
     while (pCurrent < hBuff.second) {
         val = _IQmpy(_IQsin(CurAngleRad), dcMaxVal);
-        *pCurrent = (mot_pwm_val_t) roundf(_IQtoF(val));
+        *pCurrent = (mot_pwm_val_t) _IQtoF(val);
         CurAngleRad += dAngleRad;
         pCurrent++;
     }
