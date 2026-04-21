@@ -33,10 +33,10 @@ public:
 
     /**
      * @brief Конструктор задания начальных параметров мотора
-     * @param sine_wave_freq - требуемая частота синусоидальной волны мотора в Гц (например, 50)
-     * @param amplitude - максимальное значение (амплитуда) ШИМ-счетчика, при коэффициенте заполнения при DC=100%
+     * @param sine_wave_freq - частота синусоидальной волны при инициализации мотора в Гц (например, 50)
+     * @param powerOut - выходная мощность в процентах (мощность PWM) [1...100]
      */
-    AacFanMotor(mot_sine_freq_t sine_wave_freq, mot_pwm_val_t amplitude, float powerOut = 0.0f) : _sine_freq{sine_wave_freq}, _amplitude{amplitude}, m_pwrOut{powerOut}{}
+    AacFanMotor(mot_sine_freq_t sine_wave_freq, float powerOut = 0.0f) : _sine_freq{sine_wave_freq}, _relPwrOut{powerOut}{}
 
     /**
     * @brief Первичная инициалиация оборудования для упраления мотором
@@ -68,8 +68,12 @@ public:
      * @brief Set motor speed/power
      * @param powerOut - power output as percentage (0-100)
      * @return AC_MOTOR_OK on success
+     * @synchronized
      */
     mot_err_t setPower(float powerOut);
+
+
+    mot_err_t setFrequency(mot_sine_freq_t sine_wave_freq);
 
 
 protected:
@@ -88,7 +92,7 @@ protected:
 
     /**
      * @brief Функция вычисления длинны массива (буфера) значений синуса
-     * @example PWM_FREQ / MOTOR_WAVE_FREQ; PWM_FREQ / sine_wave_freq 
+     * @example \code{.cpp} PWM_FREQ / MOTOR_WAVE_FREQ; PWM_FREQ / sine_wave_freq \endcode
      */
     virtual size_t calc_SineBufferLength(mot_sine_freq_t sine_wave_freq) noexcept = 0;
 
@@ -101,16 +105,13 @@ protected:
     // virtual void stop() = 0;
     // mot_err_t setMotorFreq(mot_sine_freq_t sine_wave_freq);
 
-
     size_t fill_SineWaveBuffer(pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& hBuff, mot_pwm_val_t max_value, float max_angle = ACMOTOR_SINE_MAX_ANGLE) noexcept;
 
     __always_inline
-    const pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& getSineBuffer() noexcept { return _hSineWaveBuffer; }
+    const pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& getCurrentSineBuffer() noexcept { return _hSineWaveBuffer; }
 
 
     mutable binary_semaphore sem{1};
-    // mot_pwm_val_t* pCurrentSineValue = nullptr;
-
 
 private:
 
@@ -121,13 +122,16 @@ private:
         return hArray.first;
     };
 
+    mot_pwm_val_t set_powerOutFast(float powerOut) noexcept;
+
     _GLIBCXX_NODISCARD
     optional<const mot_pwm_val_t*> realloc_SineWaveBuffer(pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& hArray, size_t buff_length) noexcept;
 
     mot_sine_freq_t _sine_freq;
     mot_pwm_val_t _amplitude;       // TODO: Убрать и перенести в параметр генерации синусоидального массива
-    float m_pwrOut = 0.0f;
+    float _relPwrOut = 0.0f;
 
+    pair<const mot_pwm_val_t*, const mot_pwm_val_t*> _hSineWaveMinFreqBuff;
     pair<const mot_pwm_val_t*, const mot_pwm_val_t*> _hSineWaveBuffer;
     mot_state_t m_status = AC_MOTOR_NOT_INITIALIZED;
 };

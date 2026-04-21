@@ -35,7 +35,7 @@ static bool check2ValuesByDelta(T val1, T val2, const T max_delta) {
 
 TEST_CASE("Test AacFanMotor init-deinit", "[acfan]")
 {
-    CTestAacFanMotor motor{MOTOR_WAVE_FREQ,MOTOR_MCPWM_AMPLITUDE};
+    CTestAacFanMotor motor{MOTOR_WAVE_FREQ,100.0f};
     TEST_ASSERT_EQUAL(AC_MOTOR_NOT_INITIALIZED, motor.getCurrentState());
 
     motor.initialize();
@@ -52,7 +52,7 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-90 degs", "[acfan]
     const mot_pwm_val_t MaxValue = 8000U;           // Амплитуда квантования
     const float relTolerance = 2.0f;                // Точность расхождения в процентах
 
-    CTestAacFanMotor motor{ACMOTOR_SINE_MIN_FREQ, MaxValue};
+    CTestAacFanMotor motor{ACMOTOR_SINE_MIN_FREQ, 100.0f};
     TEST_ASSERT_FALSE_MESSAGE(motor.initialize(),"Error: fail Motor initialize.");
 
     const mot_pwm_val_t Offset = motor.calc_SineBufferLength(ACMOTOR_SINE_MIN_FREQ);
@@ -86,7 +86,7 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-180 degs", "[acfan
     const float relTolerance = 6.5f;                // Точность расхождения в процентах (в библиетеке IQmath набегающая погрешность)
     const mot_sine_freq_t MOTOR_SINE_FREQ = MOTOR_WAVE_FREQ;
 
-    CTestAacFanMotor motor{MOTOR_SINE_FREQ, MaxValue};
+    CTestAacFanMotor motor{MOTOR_SINE_FREQ, 100.0f};
     TEST_ASSERT_FALSE_MESSAGE(motor.initialize(),"Error: fail Motor initialize.");
 
     const mot_pwm_val_t Offset = motor.calc_SineBufferLength(MOTOR_SINE_FREQ);
