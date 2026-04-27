@@ -57,7 +57,7 @@ end_get_power:
 acmot_err_t AacFanMotor::setFrequency(acmot_sinefreq_t sine_wave_freq)
 {
     sem.acquire();
-    acmot_err_t result = AC_MOTOR_OK; size_t sine_buff_len;
+    acmot_err_t result = AC_MOTOR_OK;
     if (_m_status == AC_MOTOR_NOT_INITIALIZED) {
         result = AC_ERR_MOTOR_NOT_INITIALIZED;
         goto end_set_freq;
@@ -68,15 +68,7 @@ acmot_err_t AacFanMotor::setFrequency(acmot_sinefreq_t sine_wave_freq)
         goto end_set_freq;
     }
 
-    sine_buff_len = calc_SineBufferLength(sine_wave_freq);
-    if (!sine_buff_len || sine_buff_len > _hSineWaveMinFreqBuff.second - _hSineWaveMinFreqBuff.first) {
-        result = AC_ERR_MOTOR_FAIL;
-        goto end_set_freq;
-    }
-    _hSineWaveBuffer = {_hSineWaveMinFreqBuff.first, _hSineWaveMinFreqBuff.first + sine_buff_len};
-    _currentSineFreq = sine_wave_freq;
-
-    // TODO: Вставить функцию пересчета синуса
+    _resizeWaveBufferAndFill(_hSineWaveBuffer, sine_wave_freq, _currentAmplitude);
 
 end_set_freq:
     sem.release();
@@ -97,7 +89,7 @@ acmot_err_t AacFanMotor::initialize()
     }
     _hSineWaveBuffer = {_hSineWaveMinFreqBuff};
 
-    _setPowerOutImmediately(_currentAmplitude);
+    _resizeWaveBufferAndFill(_hSineWaveBuffer, _currentSineFreq, _currentAmplitude);
 
     result = this->hw_init();
     if (result != AC_MOTOR_OK) { goto end_init_memfree; }
@@ -163,7 +155,8 @@ size_t AacFanMotor::fill_SineWaveBuffer(pair<const acmot_sineval_t *, const acmo
 {
     size_t length = hBuff.second - hBuff.first;
 
-    _iq dAngleRad = _IQmpy(_IQ(max_angle/length), _IQ(M_PI / 180.0f));             // Convert dAlpha angle to dAlphaRad (radians)
+    constexpr const _iq rad = _IQ(M_PI / 180.0f);
+    _iq dAngleRad = _IQmpy(_IQ(max_angle/length), rad);             // Convert dAlpha angle to dAlphaRad (radians)
     _iq CurAngleRad = 0, dcMaxVal = _IQ(max_value), val;
  
     acmot_sineval_t* pCurrent = const_cast<acmot_sineval_t*>(hBuff.first);             // Set pointer to start of buffer

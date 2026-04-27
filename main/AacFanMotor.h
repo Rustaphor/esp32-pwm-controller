@@ -132,6 +132,17 @@ private:
         return hArray.first;
     };
 
+    inline void _resizeWaveBufferAndFill(pair<const acmot_sineval_t*, const acmot_sineval_t*>& hBuff, acmot_sinefreq_t sine_wave_freq, acmot_sineval_t amplitude) noexcept {
+        auto sine_buff_len = calc_SineBufferLength(sine_wave_freq);
+        if (!sine_buff_len || sine_buff_len > hBuff.second - hBuff.first) {
+            return;
+        }
+        hBuff = {_hSineWaveMinFreqBuff.first, _hSineWaveMinFreqBuff.first + sine_buff_len};
+        _currentSineFreq = sine_wave_freq;
+
+        fill_SineWaveBuffer(hBuff, amplitude);
+    }
+
     _GLIBCXX_NODISCARD
     static acmot_sineval_t _calcMaxSineValue(float powerOut) noexcept;
 
@@ -145,7 +156,7 @@ private:
     optional<const acmot_sineval_t*> _reAllocSineWaveBuffer(pair<const acmot_sineval_t*, const acmot_sineval_t*>& hArray, size_t buff_length) noexcept;
 
     acmot_sinefreq_t _currentSineFreq;
-    acmot_sineval_t _currentAmplitude;       // TODO: Убрать и перенести в параметр генерации синусоидального массива
+    acmot_sineval_t _currentAmplitude;
 
     pair<const acmot_sineval_t*, const acmot_sineval_t*> _hSineWaveMinFreqBuff;
     pair<const acmot_sineval_t*, const acmot_sineval_t*> _hSineWaveBuffer;
