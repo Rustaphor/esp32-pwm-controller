@@ -8,18 +8,18 @@
 #include "IQmathLib.h"
 
 
-mot_err_t AacFanMotor::run() {
+acmot_err_t AacFanMotor::run() {
     if (!this->_relPwrOut) {
-        m_status = AC_MOTOR_IS_STOPPED;
+        _m_status = AC_MOTOR_IS_STOPPED;
     }
     return AC_MOTOR_OK;
 }
 
-mot_err_t AacFanMotor::setPower(float powerOut)
+acmot_err_t AacFanMotor::setPower(float powerOut)
 {
     sem.acquire();
-    mot_err_t result = AC_MOTOR_OK;
-    if (m_status == AC_MOTOR_NOT_INITIALIZED) {
+    acmot_err_t result = AC_MOTOR_OK;
+    if (_m_status == AC_MOTOR_NOT_INITIALIZED) {
         result = AC_ERR_MOTOR_NOT_INITIALIZED;
         goto end_set_power;
     }
@@ -29,18 +29,18 @@ mot_err_t AacFanMotor::setPower(float powerOut)
         goto end_set_power;
     }
 
-    set_powerOutFast(powerOut);
+    _setPowerOutFast(powerOut);
 
 end_set_power:
     sem.release();
     return result;
 }
 
-mot_err_t AacFanMotor::setFrequency(mot_sine_freq_t sine_wave_freq)
+acmot_err_t AacFanMotor::setFrequency(acmot_sinefreq_t sine_wave_freq)
 {
     sem.acquire();
-    mot_err_t result = AC_MOTOR_OK; size_t sine_buff_len;
-    if (m_status == AC_MOTOR_NOT_INITIALIZED) {
+    acmot_err_t result = AC_MOTOR_OK; size_t sine_buff_len;
+    if (_m_status == AC_MOTOR_NOT_INITIALIZED) {
         result = AC_ERR_MOTOR_NOT_INITIALIZED;
         goto end_set_freq;
     }
@@ -65,25 +65,25 @@ end_set_freq:
     return result;
 }
 
-mot_err_t AacFanMotor::initialize()
+acmot_err_t AacFanMotor::initialize()
 {
     sem.acquire();
-    mot_err_t result;
+    acmot_err_t result;
 
-    optional<const mot_pwm_val_t*> op1, op2;
+    optional<const acmot_sineval_t*> op1, op2;
     uint16_t sine_array_len = calc_SineBufferLength(_sine_freq);
-    op1 = alloc_WaveBuffer(_hSineWaveMinFreqBuff, sine_array_len);
+    op1 = _allocWaveBuffer(_hSineWaveMinFreqBuff, sine_array_len);
     if (!op1.has_value()) {
         result = AC_ERR_MOTOR_NO_MEMORY;
         goto end_init;
     }
     _hSineWaveBuffer = {_hSineWaveMinFreqBuff};
 
-    set_powerOutFast(_relPwrOut);
+    _setPowerOutFast(_relPwrOut);
 
     result = this->hw_init();
     if (result != AC_MOTOR_OK) { goto end_init_memfree; }
-    m_status = AC_MOTOR_INITIALIZED;
+    _m_status = AC_MOTOR_INITIALIZED;
     goto end_init;
 
 end_init_memfree:
@@ -94,13 +94,13 @@ end_init:
     return result;
 }
 
-mot_err_t AacFanMotor::deinitialize()
+acmot_err_t AacFanMotor::deinitialize()
 {
     sem.acquire();
-    mot_err_t result;
+    acmot_err_t result;
 
     // Проверка инициализирован ли мотор
-    if (m_status == AC_MOTOR_NOT_INITIALIZED) {
+    if (_m_status == AC_MOTOR_NOT_INITIALIZED) {
         result = AC_ERR_MOTOR_NOT_INITIALIZED;
         goto end_deinit;
     }
@@ -108,45 +108,45 @@ mot_err_t AacFanMotor::deinitialize()
 
     result = hw_deinit();
     if (_hSineWaveMinFreqBuff.first) {
-        free(const_cast<mot_pwm_val_t*>(_hSineWaveMinFreqBuff.first));
+        free(const_cast<acmot_sineval_t*>(_hSineWaveMinFreqBuff.first));
         _hSineWaveMinFreqBuff = {};
         _hSineWaveBuffer = {};
     }
-    m_status = AC_MOTOR_NOT_INITIALIZED;
+    _m_status = AC_MOTOR_NOT_INITIALIZED;
 
 end_deinit:
     sem.release();
     return result;
 }
 
-mot_pwm_val_t AacFanMotor::set_powerOutFast(float powerOut) noexcept
+acmot_sineval_t AacFanMotor::_setPowerOutFast(float powerOut) noexcept
 {
     _iq amp = _IQmpy(_IQ(ACMOTOR_SINE_MAX_VALUE), _IQ(powerOut / 100.0f));
-    mot_pwm_val_t max_val = _IQtoF(amp);
+    acmot_sineval_t max_val = _IQtoF(amp);
     fill_SineWaveBuffer(_hSineWaveBuffer, max_val);
     _relPwrOut = powerOut;
     return max_val;
 }
 
-optional<const mot_pwm_val_t *> AacFanMotor::realloc_SineWaveBuffer(pair<const mot_pwm_val_t *, const mot_pwm_val_t *> &hArray, size_t buff_length) noexcept
+optional<const acmot_sineval_t *> AacFanMotor::_reAllocSineWaveBuffer(pair<const acmot_sineval_t *, const acmot_sineval_t *> &hArray, size_t buff_length) noexcept
 {
-    hArray.first = (mot_pwm_val_t*) realloc((void*) hArray.first, buff_length * sizeof(mot_pwm_val_t));
+    hArray.first = (acmot_sineval_t*) realloc((void*) hArray.first, buff_length * sizeof(acmot_sineval_t));
     hArray.second = hArray.first + buff_length;
     return hArray.first;
 }
 
-size_t AacFanMotor::fill_SineWaveBuffer(pair<const mot_pwm_val_t *, const mot_pwm_val_t *> &hBuff, mot_pwm_val_t max_value, float max_angle) noexcept
+size_t AacFanMotor::fill_SineWaveBuffer(pair<const acmot_sineval_t *, const acmot_sineval_t *> &hBuff, acmot_sineval_t max_value, float max_angle) noexcept
 {
     size_t length = hBuff.second - hBuff.first;
 
     _iq dAngleRad = _IQmpy(_IQ(max_angle/length), _IQ(M_PI / 180.0f));             // Convert dAlpha angle to dAlphaRad (radians)
     _iq CurAngleRad = 0, dcMaxVal = _IQ(max_value), val;
  
-    mot_pwm_val_t* pCurrent = const_cast<mot_pwm_val_t*>(hBuff.first);             // Set pointer to start of buffer
+    acmot_sineval_t* pCurrent = const_cast<acmot_sineval_t*>(hBuff.first);             // Set pointer to start of buffer
 
     while (pCurrent < hBuff.second) {
         val = _IQmpy(_IQsin(CurAngleRad), dcMaxVal);
-        *pCurrent = (mot_pwm_val_t) _IQtoF(val);
+        *pCurrent = (acmot_sineval_t) _IQtoF(val);
         CurAngleRad += dAngleRad;
         pCurrent++;
     }

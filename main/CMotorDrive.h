@@ -43,7 +43,7 @@ public:
     // Constructors
     CMotorDrive();
 
-    mot_err_t initialize();
+    acmot_err_t initialize();
 
     
     // Destructor
@@ -51,16 +51,16 @@ public:
     
     // // Assignment operator
     // CMotorDrive& operator=(const CMotorDrive& other);
-    mot_err_t run();
+    acmot_err_t run();
 
-    mot_err_t stop();
+    acmot_err_t stop();
 
-    mot_err_t setDC(uint16_t pwm_dc);
+    acmot_err_t setDC(uint16_t pwm_dc);
 
 
 protected:
-    mot_err_t hw_enable(bool en);
-    mot_err_t hw_deinit() override;
+    acmot_err_t hw_enable(bool en);
+    acmot_err_t hw_deinit() override;
     
 private:
     mcpwm_timer_handle_t hTimer_;

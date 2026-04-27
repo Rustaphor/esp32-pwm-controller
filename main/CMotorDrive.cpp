@@ -35,7 +35,7 @@ CMotorDrive::CMotorDrive() : AacFanMotor{(MOTOR_MCPWM_TIMER_RESOLUTION_HZ/MOTOR_
     
 }
 
-mot_err_t CMotorDrive::initialize()
+acmot_err_t CMotorDrive::initialize()
 {
     esp_err_t result;
 
@@ -150,9 +150,9 @@ exit_error_init:
     return AC_ERR_MOTOR_INIT_FALURE;
 }
 
-mot_err_t CMotorDrive::hw_deinit()
+acmot_err_t CMotorDrive::hw_deinit()
 {
-    mot_err_t result;
+    acmot_err_t result;
 
     result = mcpwm_del_generator(hGenerator_[1]);
     if (result) goto err_hwinit;
@@ -182,7 +182,7 @@ CMotorDrive::~CMotorDrive() {
     hw_deinit();
 }
 
-mot_err_t CMotorDrive::run()
+acmot_err_t CMotorDrive::run()
 {
     auto result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_timer_enable(hTimer_));
     if (result) {
@@ -201,7 +201,7 @@ mot_err_t CMotorDrive::run()
     return result;
 }
 
-mot_err_t CMotorDrive::stop()
+acmot_err_t CMotorDrive::stop()
 {
     // Отправка команды таймеру-генератору ШИМ оставиться при следующем знанчении 0;
     auto result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_timer_start_stop(hTimer_, MCPWM_TIMER_STOP_EMPTY));
@@ -212,7 +212,7 @@ mot_err_t CMotorDrive::stop()
     return AC_MOTOR_OK;
 }
 
-mot_err_t CMotorDrive::setDC(uint16_t pwm_dc)
+acmot_err_t CMotorDrive::setDC(uint16_t pwm_dc)
 {
 
     ESP_LOGI(TAG, "Set DC value: %d", pwm_dc);
@@ -221,9 +221,9 @@ mot_err_t CMotorDrive::setDC(uint16_t pwm_dc)
     return result;
 }
 
-mot_err_t CMotorDrive::hw_enable(bool en)
+acmot_err_t CMotorDrive::hw_enable(bool en)
 {
-    mot_err_t result = AC_MOTOR_OK;
+    acmot_err_t result = AC_MOTOR_OK;
 #ifdef MOTOR_DRV_EN_PIN
     result = gpio_set_level(MOTOR_DRV_EN_PIN, en);
     ESP_LOGI(TAG, "Mosfet gate driver is %s", en ? "Enable" : "Disable");

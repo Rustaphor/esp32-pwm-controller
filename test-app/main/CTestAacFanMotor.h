@@ -20,19 +20,19 @@
 class CTestAacFanMotor : public AacFanMotor {
 
 public:
-    CTestAacFanMotor(mot_sine_freq_t sine_wave_freq, float powerOut) : AacFanMotor{sine_wave_freq,powerOut}{};
+    CTestAacFanMotor(acmot_sinefreq_t sine_wave_freq, float powerOut) : AacFanMotor{sine_wave_freq,powerOut}{};
 
-    size_t calc_SineBufferLength(mot_sine_freq_t sine_wave_freq) noexcept override;
+    size_t calc_SineBufferLength(acmot_sinefreq_t sine_wave_freq) noexcept override;
 
-    pair<const mot_pwm_val_t*, const mot_pwm_val_t*>& get_SineBuffer() noexcept {
-        return const_cast<pair<const mot_pwm_val_t*, const mot_pwm_val_t*>&>(getCurrentSineBuffer());
+    pair<const acmot_sineval_t*, const acmot_sineval_t*>& get_SineBuffer() noexcept {
+        return const_cast<pair<const acmot_sineval_t*, const acmot_sineval_t*>&>(getCurrentSineBuffer());
     };
 
-    void test_fillSineBuffer(mot_pwm_val_t max_value, float max_angle) noexcept {
-        fill_SineWaveBuffer(const_cast<pair<const mot_pwm_val_t*, const mot_pwm_val_t*>&>(getCurrentSineBuffer()),max_value,max_angle);
+    void test_fillSineBuffer(acmot_sineval_t max_value, float max_angle) noexcept {
+        fill_SineWaveBuffer(const_cast<pair<const acmot_sineval_t*, const acmot_sineval_t*>&>(getCurrentSineBuffer()),max_value,max_angle);
     };
 
 protected:
-    mot_err_t hw_init() override;
-    mot_err_t hw_deinit() override;
+    acmot_err_t hw_init() override;
+    acmot_err_t hw_deinit() override;
 };
