@@ -10,10 +10,13 @@ using namespace std;
 template<typename T>
 static bool check2ValuesByTolerance(T val1, T val2, const float relTol) {
     if (val1 == val2) return true;
-    else if (val1 > val2 && 100*(1 - (double) val2/(double) val1) <= relTol) {
+    else if (val1 == 0 || val2 == 0) {
+        if (val1 + val2 <= relTol) return true;
+    }
+    else if (val1 > val2 && (val1 - val2) / val1 * 100.0f <= relTol) {
         return true;
     }
-    else if (val2 > val1 && 100*(1 - (double) val1/(double) val2) <= relTol) {
+    else if (val2 > val1 && (val2 - val1) / val2 * 100.0f <= relTol) {
         return true;
     }
 
@@ -111,4 +114,31 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-180 degs", "[acfan
 
     motor.deinitialize();
     delete[] p1;
+}
+
+
+TEST_CASE("Test AacFanMotor setting Output Power", "[acfan]"){
+    CTestAacFanMotor motor{MOTOR_WAVE_FREQ, 0.0f};
+    TEST_ASSERT_FALSE_MESSAGE(motor.initialize(),"Error: fail Motor initialize.");
+
+    float in_range[] = {0.0f, 0.001f, 10.0f, 12.2f, 12.31f, 40.0f, 50.0f, 100.0f};
+    for (auto cur_val : in_range) {
+        TEST_ASSERT_FALSE(motor.setPower(cur_val));
+        TEST_ASSERT_TRUE(check2ValuesByTolerance(motor.getPowerOutPercent(), cur_val, 0.30f));
+    }
+    
+    motor.deinitialize();
+}
+
+
+TEST_CASE("Test AacFanMotor out of range setting power value", "[acfan]"){
+    CTestAacFanMotor motor{MOTOR_WAVE_FREQ, 120.0f};
+    TEST_ASSERT_FALSE_MESSAGE(motor.initialize(),"Error: fail Motor initialize.");
+
+    float in_range[] = {-1.0f, 100.01f, 110.0f};
+    for (auto cur_val : in_range) {
+        TEST_ASSERT_EQUAL(AC_ERR_MOTOR_INVALID_POWER, motor.setPower(cur_val));
+    }
+    
+    motor.deinitialize();
 }

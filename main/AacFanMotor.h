@@ -36,7 +36,13 @@ public:
      * @param sine_wave_freq - частота синусоидальной волны при инициализации мотора в Гц (например, 50)
      * @param powerOut - выходная мощность в процентах (мощность PWM) [1...100]
      */
-    AacFanMotor(acmot_sinefreq_t sine_wave_freq, float powerOut = 0.0f) : _sine_freq{sine_wave_freq}, _relPwrOut{powerOut}{}
+    AacFanMotor(acmot_sinefreq_t sine_wave_freq, float powerOut = 0.0f) : _currentSineFreq{sine_wave_freq}{
+        if (powerOut > 0 && powerOut <= 100) {
+            _currentAmplitude = AacFanMotor::_calcMaxSineValue(powerOut);
+        } else {
+            _currentAmplitude = 0;
+        }
+    }
 
     /**
     * @brief Первичная инициалиация оборудования для упраления мотором
@@ -68,9 +74,14 @@ public:
      * @brief Set motor speed/power
      * @param powerOut - power output as percentage (0-100)
      * @return AC_MOTOR_OK on success
-     * @synchronized
      */
-    acmot_err_t setPower(float powerOut);
+    virtual acmot_err_t setPower(float powerOut) noexcept;
+
+    /**
+     * @brief Мощноость мотора в пересчитанных процентах
+     * @return Мощность мотора в процентах (%)
+     */
+    float getPowerOutPercent() noexcept;
 
 
     acmot_err_t setFrequency(acmot_sinefreq_t sine_wave_freq);
@@ -110,7 +121,6 @@ protected:
     __always_inline
     const pair<const acmot_sineval_t*, const acmot_sineval_t*>& getCurrentSineBuffer() noexcept { return _hSineWaveBuffer; }
 
-
     mutable binary_semaphore sem{1};
 
 private:
@@ -122,14 +132,20 @@ private:
         return hArray.first;
     };
 
-    acmot_sineval_t _setPowerOutFast(float powerOut) noexcept;
+    _GLIBCXX_NODISCARD
+    static acmot_sineval_t _calcMaxSineValue(float powerOut) noexcept;
+
+    acmot_sineval_t _setPowerOutImmediately(acmot_sineval_t powerOut) noexcept;
+    inline acmot_sineval_t _setPowerOutImmediately(float powerOut) noexcept {
+        auto max_val = AacFanMotor::_calcMaxSineValue(powerOut);
+        return _setPowerOutImmediately(max_val);
+    };
 
     _GLIBCXX_NODISCARD
     optional<const acmot_sineval_t*> _reAllocSineWaveBuffer(pair<const acmot_sineval_t*, const acmot_sineval_t*>& hArray, size_t buff_length) noexcept;
 
-    acmot_sinefreq_t _sine_freq;
-    acmot_sineval_t _amplitude;       // TODO: Убрать и перенести в параметр генерации синусоидального массива
-    float _relPwrOut = 0.0f;
+    acmot_sinefreq_t _currentSineFreq;
+    acmot_sineval_t _currentAmplitude;       // TODO: Убрать и перенести в параметр генерации синусоидального массива
 
     pair<const acmot_sineval_t*, const acmot_sineval_t*> _hSineWaveMinFreqBuff;
     pair<const acmot_sineval_t*, const acmot_sineval_t*> _hSineWaveBuffer;

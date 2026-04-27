@@ -9,29 +9,47 @@
 
 
 acmot_err_t AacFanMotor::run() {
-    if (!this->_relPwrOut) {
+    if (!this->_currentAmplitude) {
         _m_status = AC_MOTOR_IS_STOPPED;
     }
     return AC_MOTOR_OK;
 }
 
-acmot_err_t AacFanMotor::setPower(float powerOut)
+acmot_err_t AacFanMotor::setPower(float powerOut) noexcept
 {
     sem.acquire();
     acmot_err_t result = AC_MOTOR_OK;
+
+    // Проверка инициализирован ли мотор
     if (_m_status == AC_MOTOR_NOT_INITIALIZED) {
         result = AC_ERR_MOTOR_NOT_INITIALIZED;
         goto end_set_power;
     }
 
+    // Проверка корректности входных данных
     if (powerOut < 0 || powerOut > 100) {
         result = AC_ERR_MOTOR_INVALID_POWER;
         goto end_set_power;
     }
 
-    _setPowerOutFast(powerOut);
+    _setPowerOutImmediately(powerOut);
 
 end_set_power:
+    sem.release();
+    return result;
+}
+
+float AacFanMotor::getPowerOutPercent() noexcept
+{
+    // TODO: Добавить мьютекс чтения
+    sem.acquire();
+    float result = 0.0f; _iq cur_pwr;
+    constexpr const _iq mp = _IQ(100.0f/ACMOTOR_SINE_MAX_VALUE);
+    if (_currentAmplitude == 0) goto end_get_power;
+    cur_pwr = _IQmpy(_IQ(_currentAmplitude), mp);
+    result = _IQtoF(cur_pwr);
+
+end_get_power:
     sem.release();
     return result;
 }
@@ -56,7 +74,7 @@ acmot_err_t AacFanMotor::setFrequency(acmot_sinefreq_t sine_wave_freq)
         goto end_set_freq;
     }
     _hSineWaveBuffer = {_hSineWaveMinFreqBuff.first, _hSineWaveMinFreqBuff.first + sine_buff_len};
-    _sine_freq = sine_wave_freq;
+    _currentSineFreq = sine_wave_freq;
 
     // TODO: Вставить функцию пересчета синуса
 
@@ -71,7 +89,7 @@ acmot_err_t AacFanMotor::initialize()
     acmot_err_t result;
 
     optional<const acmot_sineval_t*> op1, op2;
-    uint16_t sine_array_len = calc_SineBufferLength(_sine_freq);
+    uint16_t sine_array_len = calc_SineBufferLength(_currentSineFreq);
     op1 = _allocWaveBuffer(_hSineWaveMinFreqBuff, sine_array_len);
     if (!op1.has_value()) {
         result = AC_ERR_MOTOR_NO_MEMORY;
@@ -79,7 +97,7 @@ acmot_err_t AacFanMotor::initialize()
     }
     _hSineWaveBuffer = {_hSineWaveMinFreqBuff};
 
-    _setPowerOutFast(_relPwrOut);
+    _setPowerOutImmediately(_currentAmplitude);
 
     result = this->hw_init();
     if (result != AC_MOTOR_OK) { goto end_init_memfree; }
@@ -119,13 +137,19 @@ end_deinit:
     return result;
 }
 
-acmot_sineval_t AacFanMotor::_setPowerOutFast(float powerOut) noexcept
+_GLIBCXX_NODISCARD acmot_sineval_t AacFanMotor::_calcMaxSineValue(float powerOut) noexcept
 {
     _iq amp = _IQmpy(_IQ(ACMOTOR_SINE_MAX_VALUE), _IQ(powerOut / 100.0f));
     acmot_sineval_t max_val = _IQtoF(amp);
-    fill_SineWaveBuffer(_hSineWaveBuffer, max_val);
-    _relPwrOut = powerOut;
     return max_val;
+}
+
+acmot_sineval_t AacFanMotor::_setPowerOutImmediately(acmot_sineval_t powerOut) noexcept
+{
+    if (_currentAmplitude == powerOut) return powerOut;
+    fill_SineWaveBuffer(_hSineWaveBuffer, powerOut);
+    _currentAmplitude = powerOut;
+    return powerOut;
 }
 
 optional<const acmot_sineval_t *> AacFanMotor::_reAllocSineWaveBuffer(pair<const acmot_sineval_t *, const acmot_sineval_t *> &hArray, size_t buff_length) noexcept
