@@ -3,39 +3,13 @@
 #include "CTestAacFanMotor.h"
 #include <utility>
 #include <iostream>
+#include "helpfuns.h"
+#include <inttypes.h>
+
+
 
 using namespace std;
 
-// Функция проверки относительной точности
-template<typename T>
-static bool check2ValuesByTolerance(T val1, T val2, const float relTol) {
-    if (val1 == val2) return true;
-    else if (val1 == 0 || val2 == 0) {
-        if (val1 + val2 <= relTol) return true;
-    }
-    else if (val1 > val2 && (val1 - val2) / val1 * 100.0f <= relTol) {
-        return true;
-    }
-    else if (val2 > val1 && (val2 - val1) / val2 * 100.0f <= relTol) {
-        return true;
-    }
-
-    return false;
-}
-
-// Функция проверки сравнительной точности
-template<typename T>
-static bool check2ValuesByDelta(T val1, T val2, const T max_delta) {
-    if (val1 == val2) return true;
-    else if (val1 > val2 && val1-val2 <= max_delta) {
-        return true;
-    }
-    else if (val2 > val1 && val2-val1 <= max_delta) {
-        return true;
-    }
-
-    return false;
-}
 
 TEST_CASE("Test AacFanMotor init-deinit", "[acfan]")
 {
@@ -49,6 +23,7 @@ TEST_CASE("Test AacFanMotor init-deinit", "[acfan]")
     TEST_ASSERT_EQUAL(AC_MOTOR_NOT_INITIALIZED, motor.getCurrentState());
 }
 
+
 TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-90 degs", "[acfan]")
 {
     // Условия теста
@@ -59,7 +34,7 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-90 degs", "[acfan]
     CTestAacFanMotor motor{ACMOTOR_SINE_MIN_FREQ, 100.0f};
     TEST_ASSERT_FALSE_MESSAGE(motor.initialize(),"Error: fail Motor initialize.");
 
-    const acmot_sineval_t Offset = motor.calc_SineBufferLength(ACMOTOR_SINE_MIN_FREQ);
+    const acmot_sineval_t Offset = motor.calcSineBufferLength(ACMOTOR_SINE_MIN_FREQ);
     
     // Создание тестового буфера и заполнение его синусом
     acmot_sineval_t* p1 = new acmot_sineval_t[Offset];
@@ -82,6 +57,7 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-90 degs", "[acfan]
     delete[] p1;
 }
 
+
 TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-180 degs", "[acfan]")
 {
     // Условия теста
@@ -93,7 +69,7 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-180 degs", "[acfan
     CTestAacFanMotor motor{MOTOR_SINE_FREQ, 100.0f};
     TEST_ASSERT_FALSE_MESSAGE(motor.initialize(),"Error: fail Motor initialize.");
 
-    const acmot_sineval_t Offset = motor.calc_SineBufferLength(MOTOR_SINE_FREQ);
+    const acmot_sineval_t Offset = motor.calcSineBufferLength(MOTOR_SINE_FREQ);
     
     // Создание тестового буфера и заполнение его синусом
     acmot_sineval_t* p1 = new acmot_sineval_t[Offset];
@@ -104,8 +80,16 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-180 degs", "[acfan
         expectBuff.first[i] = sinf(Alpha) * MaxValue;
     }
 
+#if DISABLED_FOR_TARGETS(linux)
+    // Start the timer
+    ccomp_timer_start();
+#endif
     // Заполнение его синусом тестируемого объекта
     motor.test_fillSineBuffer(MaxValue, MaxAngle);
+#if DISABLED_FOR_TARGETS(linux)
+    int64_t t = ccomp_timer_stop();
+    cout << "Time: " << t << " us";
+#endif
 
     // Сравнение результатов
     for (int i = 0; i < Offset; ++i) {
@@ -125,7 +109,7 @@ TEST_CASE("Test AacFanMotor setting Output Power", "[acfan]"){
     for (auto cur_val : in_range) {
         TEST_ASSERT_FALSE(motor.setPower(cur_val));
         TEST_ASSERT_TRUE(check2ValuesByTolerance(motor.getPowerOutPercent(), cur_val, 0.30f));
-    }
+        }
     
     motor.deinitialize();
 }
@@ -142,3 +126,18 @@ TEST_CASE("Test AacFanMotor out of range setting power value", "[acfan]"){
     
     motor.deinitialize();
 }
+
+#if DISABLED_FOR_TARGETS(linux)
+TEST_CASE("Test CMotorDrive ISR-handler", "[acfan]"){
+    CTestAacFanMotor motor{MOTOR_WAVE_FREQ, 100.0f};
+    const unsigned long ISR_CALL_TIMES = 100UL * motor.calcSineBufferLength(MOTOR_WAVE_FREQ);       // Кол-полных ISR-handler кратных размеру массива синусоидных чисел
+
+    TEST_ASSERT_FALSE_MESSAGE(motor.initialize(),"Error: fail Motor initialize.");
+
+    for (unsigned long i = 0; i < ISR_CALL_TIMES; ++i) {
+        
+    }
+    
+    motor.deinitialize();
+}
+#endif //!TEMPORARY_DISABLED_FOR_TARGETS(linux)

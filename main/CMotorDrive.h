@@ -3,7 +3,6 @@
 #ifndef C_MOTOR_DRIVE_H
 #define C_MOTOR_DRIVE_H
 
-#include "AacFanMotor.h"
 #include "driver/gpio.h"
 #include "driver/mcpwm_prelude.h"
 #include "freertos/FreeRTOS.h"
@@ -11,6 +10,7 @@
 #define MOTOR_MCPWM_TIMER_RESOLUTION_HZ 80000000     // 80MHz Частота выходе первого делителя главного тактового генератора
 #define MOTOR_MCPWM_PERIOD              942          // 84.925KHz (диапазон значений ШИМ DC 0-100%: 0...MOTOR_MCPWM_PERIOD/2)
 #define MOTOR_WAVE_FREQ                 50           // 50Hz Single phase AC
+#include "AacFanMotor.h"
 // #define MOTOR_SPEED_UPDATE_PERIOD_US    200000      // 200ms
 
 #define MOTOR_DRV_EN_PIN        GPIO_NUM_16
@@ -41,11 +41,8 @@ public:
     SemaphoreHandle_t hxSem = xSemaphoreCreateCounting(1, 0);
 
     // Constructors
-    CMotorDrive();
+    CMotorDrive() : AacFanMotor{MOTOR_WAVE_FREQ, 100.0f}, hTimer_{NULL}{};
 
-    acmot_err_t initialize();
-
-    
     // Destructor
     ~CMotorDrive();
     
@@ -59,6 +56,7 @@ public:
 
 
 protected:
+    acmot_err_t hw_init() override;
     acmot_err_t hw_enable(bool en);
     acmot_err_t hw_deinit() override;
     
@@ -71,9 +69,6 @@ private:
     mcpwm_fault_handle_t hFaultPin_ = NULL;
 #endif
 
-
-    // Private methods
-    void helperFunction();
 
 };
 

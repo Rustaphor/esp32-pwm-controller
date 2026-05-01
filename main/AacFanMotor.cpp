@@ -81,7 +81,7 @@ acmot_err_t AacFanMotor::initialize()
     acmot_err_t result;
 
     optional<const acmot_sineval_t*> op1, op2;
-    uint16_t sine_array_len = calc_SineBufferLength(_currentSineFreq);
+    uint16_t sine_array_len = calcSineBufferLength(_currentSineFreq);
     op1 = _allocWaveBuffer(_hSineWaveMinFreqBuff, sine_array_len);
     if (!op1.has_value()) {
         result = AC_ERR_MOTOR_NO_MEMORY;

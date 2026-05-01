@@ -29,13 +29,7 @@ bool IRAM_ATTR pwmtimer_onupdate_isr_cb(mcpwm_timer_handle_t timer, const mcpwm_
     return task_yield;
 }
 
-
-// Default constructor
-CMotorDrive::CMotorDrive() : AacFanMotor{(MOTOR_MCPWM_TIMER_RESOLUTION_HZ/MOTOR_MCPWM_PERIOD/MOTOR_WAVE_FREQ/4), (MOTOR_MCPWM_PERIOD/2)}, hTimer_{NULL} {
-    
-}
-
-acmot_err_t CMotorDrive::initialize()
+acmot_err_t hw_init()
 {
     esp_err_t result;
 
@@ -221,6 +215,7 @@ acmot_err_t CMotorDrive::setDC(uint16_t pwm_dc)
     return result;
 }
 
+
 acmot_err_t CMotorDrive::hw_enable(bool en)
 {
     acmot_err_t result = AC_MOTOR_OK;
@@ -231,7 +226,3 @@ acmot_err_t CMotorDrive::hw_enable(bool en)
     return result;
 }
 
-// Private helper function
-void CMotorDrive::helperFunction() {
-    // Implementation here
-}

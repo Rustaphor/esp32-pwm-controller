@@ -105,7 +105,7 @@ protected:
      * @brief Функция вычисления длинны массива (буфера) значений синуса
      * @example \code{.cpp} PWM_FREQ / MOTOR_WAVE_FREQ; PWM_FREQ / sine_wave_freq \endcode
      */
-    virtual size_t calc_SineBufferLength(acmot_sinefreq_t sine_wave_freq) noexcept = 0;
+    virtual size_t calcSineBufferLength(acmot_sinefreq_t sine_wave_freq) noexcept = 0;
 
     /**
      * @brief Запуск мотора с заданной скоростью
@@ -133,7 +133,7 @@ private:
     };
 
     inline void _resizeWaveBufferAndFill(pair<const acmot_sineval_t*, const acmot_sineval_t*>& hBuff, acmot_sinefreq_t sine_wave_freq, acmot_sineval_t amplitude) noexcept {
-        auto sine_buff_len = calc_SineBufferLength(sine_wave_freq);
+        auto sine_buff_len = calcSineBufferLength(sine_wave_freq);
         if (!sine_buff_len || sine_buff_len > hBuff.second - hBuff.first) {
             return;
         }

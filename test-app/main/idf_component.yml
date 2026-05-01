@@ -7,5 +7,4 @@ dependencies:
 # NOTE! It's link to managed component in main application. First to download one you have to configure main application!
   espressif/iqmath:
     path: ../../managed_components/espressif__iqmath
-
-
+  
