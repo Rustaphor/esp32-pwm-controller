@@ -9,6 +9,7 @@
 // Define error codes
 #define AC_MOTOR_OK                     0
 #define AC_ERR_MOTOR_FAIL               0x200
+#define AC_ERR_MOTOR_IS_BUSY_NOW        0x201
 #define AC_ERR_MOTOR_INIT_FALURE        0x202
 #define AC_ERR_MOTOR_NO_MEMORY          0x203
 #define AC_ERR_MOTOR_NOT_INITIALIZED    0x204
@@ -43,13 +44,10 @@ typedef uint8_t acmot_sinefreq_t;
 /**
  * Максимальное значение функции синуса (положительной полуволны)
  * 
- * @details Глобальный параметр определяющий максимально возможное значение расчетное значение синусоиды.
+ * @details Глобальный конфигурационный параметр, определяющий максимально возможное значение расчетное значение синусоиды. Задается в конкретной реализации "железа"
  * @showinitializer
  */
-#ifndef ACMOTOR_SINE_MAX_VALUE
-#define ACMOTOR_SINE_MAX_VALUE    4096
-#endif
-
+#define ACMOTOR_SINE_MAX_VALUE    (942 / 2)
 
 
 #endif // ACMOTOR_DEFS_H

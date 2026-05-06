@@ -7,8 +7,6 @@
 #include <semaphore>
 #include <cstdlib>
 
-// TODO: Debug only: delete after
-#include <iostream>
 
 typedef int acmot_err_t;
 typedef enum {
@@ -57,12 +55,16 @@ public:
     * @retval AC_MOTOR_OK - успех, иначе код ошибки
     */
     acmot_err_t deinitialize();
-
   
     /**
      * @brief Запуск мотора с прежней (ранее установленной) мощностью
      */
-    acmot_err_t run();
+    acmot_err_t run() { return _run(_currentAmplitude); }
+
+    /**
+    * @brief Остановка мотора
+    */
+    acmot_err_t stop();
 
     /**
      * @brief Получение текущего состояния мотора. Потокобезопасно.
@@ -75,7 +77,7 @@ public:
      * @param powerOut - power output as percentage (0-100)
      * @return AC_MOTOR_OK on success
      */
-    virtual acmot_err_t setPower(float powerOut) noexcept;
+    acmot_err_t setPower(float powerOut) noexcept;
 
     /**
      * @brief Мощноость мотора в пересчитанных процентах
@@ -96,25 +98,33 @@ protected:
     virtual acmot_err_t hw_init() = 0;
 
     /**
-    * @brief Деинициализация оборудования, например, при переходе в спящий режим
-    * @details Метод вызывается из метода deinitialize()
-    */
+     * @brief Деинициализация оборудования, например, при переходе в спящий режим
+     * @details Метод вызывается из метода deinitialize()
+     */
     virtual acmot_err_t hw_deinit() = 0;
 
     /**
      * @brief Функция вычисления длинны массива (буфера) значений синуса
      * @example \code{.cpp} PWM_FREQ / MOTOR_WAVE_FREQ; PWM_FREQ / sine_wave_freq \endcode
      */
+    _GLIBCXX_NODISCARD
     virtual size_t calcSineBufferLength(acmot_sinefreq_t sine_wave_freq) noexcept = 0;
 
     /**
-     * @brief Запуск мотора с заданной скоростью
-     * @param powerOut - выходная мощность в процентах (мощность PWM) [1...100]
+     * @brief Запуск мотора с заданной мощностью или ищменение текущей мощности
+     * @details Метод вызывается из метода run().
+     * @param powerOut - выходная мощность в процентах (мощность PWM) [1...100]%
      */
-    // virtual acmot_err_t run(float powerOut) = 0;
+    virtual acmot_err_t hw_run(const acmot_sineval_t powerOut) = 0;
 
-    // virtual void stop() = 0;
-    // acmot_err_t setMotorFreq(acmot_sinefreq_t sine_wave_freq);
+    /**
+     * @brief Остановка мотора
+     * @details Метод вызывается из метода stop(). По-умолчанию устанавливает значние мошности в 0%
+     */
+    virtual acmot_err_t hw_stop() {
+        _setPowerOutImmediatelyLL(0U);
+        return AC_MOTOR_OK;
+    }
 
     size_t fill_SineWaveBuffer(pair<const acmot_sineval_t*, const acmot_sineval_t*>& hBuff, acmot_sineval_t max_value, float max_angle = ACMOTOR_SINE_MAX_ANGLE) noexcept;
 
@@ -146,11 +156,13 @@ private:
     _GLIBCXX_NODISCARD
     static acmot_sineval_t _calcMaxSineValue(float powerOut) noexcept;
 
-    acmot_sineval_t _setPowerOutImmediately(acmot_sineval_t powerOut) noexcept;
+    acmot_sineval_t _setPowerOutImmediatelyLL(acmot_sineval_t powerOut) noexcept;
     inline acmot_sineval_t _setPowerOutImmediately(float powerOut) noexcept {
         auto max_val = AacFanMotor::_calcMaxSineValue(powerOut);
-        return _setPowerOutImmediately(max_val);
+        return _setPowerOutImmediatelyLL(max_val);
     };
+
+    acmot_err_t _run(acmot_sineval_t powerOut);
 
     _GLIBCXX_NODISCARD
     optional<const acmot_sineval_t*> _reAllocSineWaveBuffer(pair<const acmot_sineval_t*, const acmot_sineval_t*>& hArray, size_t buff_length) noexcept;

@@ -8,11 +8,16 @@
 */
 
 #include <stdio.h>
-#include <string.h>
+#include <iostream>
 #include "unity.h"
 
 
-static void print_banner(const char* text);
+using namespace std;
+
+static void print_banner(const char* text)
+{
+    cout << "#### " << text << " ####" << endl;
+}
 
 extern "C"
 void app_main(void)
@@ -41,7 +46,3 @@ void app_main(void)
 
 }
 
-static void print_banner(const char* text)
-{
-    printf("\n#### %s #####\n\n", text);
-}

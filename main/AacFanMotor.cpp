@@ -8,17 +8,67 @@
 #include "IQmathLib.h"
 
 
-acmot_err_t AacFanMotor::run() {
-    if (!this->_currentAmplitude) {
-        _m_status = AC_MOTOR_IS_STOPPED;
+#include <iostream>
+
+acmot_err_t AacFanMotor::_run(acmot_sineval_t powerOut)
+{
+
+    sem.acquire();
+    acmot_err_t result = AC_MOTOR_OK;
+
+    // Проверка инициализирован ли мотор
+    if (_m_status == AC_MOTOR_NOT_INITIALIZED) {
+        result = AC_ERR_MOTOR_NOT_INITIALIZED;
+        goto end_run;
     }
-    return AC_MOTOR_OK;
+
+    if (!powerOut) {
+        result = AC_ERR_MOTOR_INVALID_POWER;
+        goto end_run;
+    }
+
+    result = this->hw_run(powerOut);
+    if (result == AC_MOTOR_OK) _m_status = AC_MOTOR_IS_RUNNING;
+
+end_run:
+    sem.release();
+    return result;
+}
+
+acmot_err_t AacFanMotor::stop()
+{
+    sem.acquire();
+    acmot_err_t result;
+
+    switch (_m_status)
+    {
+    case AC_MOTOR_IS_STOPPED:
+        result = AC_MOTOR_OK;
+        break;
+
+    case AC_MOTOR_NOT_INITIALIZED:
+        result = AC_ERR_MOTOR_NOT_INITIALIZED;
+        break;
+
+    case AC_MOTOR_IS_RUNNING:
+        result = this->hw_stop();
+        _m_status = AC_MOTOR_IS_STOPPED;
+        break;
+    
+    default:
+        result = AC_ERR_MOTOR_IS_BUSY_NOW;
+        break;
+    }
+
+    sem.release();
+    return result;
 }
 
 acmot_err_t AacFanMotor::setPower(float powerOut) noexcept
 {
     sem.acquire();
     acmot_err_t result = AC_MOTOR_OK;
+    acmot_sineval_t val;
 
     // Проверка инициализирован ли мотор
     if (_m_status == AC_MOTOR_NOT_INITIALIZED) {
@@ -31,8 +81,14 @@ acmot_err_t AacFanMotor::setPower(float powerOut) noexcept
         result = AC_ERR_MOTOR_INVALID_POWER;
         goto end_set_power;
     }
+    val = _setPowerOutImmediately(powerOut);
 
-    _setPowerOutImmediately(powerOut);
+    // Если нуль, по факту остановка мотора
+    if (val == 0 && _m_status == AC_MOTOR_IS_RUNNING)
+    {
+        result = this->hw_stop();
+        _m_status = AC_MOTOR_IS_STOPPED;
+    }
 
 end_set_power:
     sem.release();
@@ -136,7 +192,7 @@ _GLIBCXX_NODISCARD acmot_sineval_t AacFanMotor::_calcMaxSineValue(float powerOut
     return max_val;
 }
 
-acmot_sineval_t AacFanMotor::_setPowerOutImmediately(acmot_sineval_t powerOut) noexcept
+acmot_sineval_t AacFanMotor::_setPowerOutImmediatelyLL(acmot_sineval_t powerOut) noexcept
 {
     if (_currentAmplitude == powerOut) return powerOut;
     fill_SineWaveBuffer(_hSineWaveBuffer, powerOut);

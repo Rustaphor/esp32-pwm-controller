@@ -35,12 +35,16 @@ using namespace std::chrono;
  
  const auto sleep_time = seconds{1};
 
+CMotorDrive motor;
+
  void vMyTimer_callback(TimerHandle_t xTimer)
  {
-    // ESP_LOGD(TAG, "Numer of iteration %d", 4);
+    // static acmot_sineval_t pwmval = 0;
+    // pwmval++;
+    // ESP_LOGI(TAG, "pwmval = %d", pwmval);
+    // motor.test_pwm(pwmval);
  }
 
- CMotorDrive motor;
 
 
 // void print_thread_info(const char *extra = nullptr)
@@ -131,7 +135,7 @@ extern "C" [[noreturn]] void app_main(void)
     // std::thread thread_2(thread_func);
 
     // Start Software Timer
-    xTimers[0] = xTimerCreate("myTimer", 200, pdTRUE, (void*) 0, vMyTimer_callback);
+    xTimers[0] = xTimerCreate("myTimer", 100, pdTRUE, (void*) 0, vMyTimer_callback);
     if( xTimerStart(xTimers[0], 0 ) != pdPASS ) {
         ESP_LOGE(TAG,"Error starting timer.");
     }
@@ -139,16 +143,11 @@ extern "C" [[noreturn]] void app_main(void)
     // CLI initialization
     CConsoleExecutor::init();
 
-    motor.setDC(MOTOR_MCPWM_PERIOD / 4);    // set DC to 50%
-
      // Let the main task do something too
     while (true) {
         xSemaphoreTake(motor.hxSem, portMAX_DELAY);
 
         this_thread::sleep_for(sleep_time);
-
-        ESP_LOGI(TAG, "Count number is %d", motor.count);
-        motor.count = 0;
 
     }
 }

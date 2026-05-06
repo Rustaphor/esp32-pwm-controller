@@ -2,7 +2,6 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "hal/mcpwm_ll.h"
-#include "freertos/FreeRTOS.h"
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
@@ -12,24 +11,33 @@ const char* TAG = "MotorDriver";
 
 // Обработчик прерывания таймера ШИМ-счетчика
 bool IRAM_ATTR pwmtimer_onupdate_isr_cb(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t *edata, void *user_ctx) {
-    // TODO: Переписать на низкоуровневую фукцию HAL
-    // mcpwm_ll_operator_set_compare_value(MCPWM_LL_GET_HW(MOTOR_DRV_GRPID), oper_id, cmpr_id, cmp_ticks);
-
     // DRAM_ATTR (для констант)
 
+    static int inc_dec = 1;
     BaseType_t task_yield = pdFALSE;
-
     CMotorDrive* pMotor = (CMotorDrive*) user_ctx;
-    xSemaphoreGiveFromISR(pMotor->hxSem, &task_yield);
 
+    // Назначение DC значения ШИМ
+    // TODO: Переписать на низкоуровневую фукцию HAL, чтобы убрать внутренние проверки
+    // mcpwm_ll_operator_set_compare_value(MCPWM_LL_GET_HW(MOTOR_DRV_GRPID), oper_id, cmpr_id, cmp_ticks);
+    mcpwm_comparator_set_compare_value(pMotor->hComparator_, *pMotor->_pCurSineVal);
+    pMotor->_pCurSineVal += inc_dec;
 
-    pMotor->count++;
-    // mcpwm_comparator_set_compare_value(pMotor->hComparator_, dct);
+    if (pMotor->_pCurSineVal >= pMotor->getCurrentSineBuffer().second || pMotor->_pCurSineVal < pMotor->getCurrentSineBuffer().first) {
+        inc_dec *= -1;
+        pMotor->_pCurSineVal += inc_dec;
+        xSemaphoreGiveFromISR(pMotor->hxSem, &task_yield);
+    }
 
     return task_yield;
 }
 
-acmot_err_t hw_init()
+void CMotorDrive::test_pwm(acmot_sineval_t pwm_value)
+{
+    mcpwm_comparator_set_compare_value(hComparator_, pwm_value);
+}
+
+acmot_err_t CMotorDrive::hw_init()
 {
     esp_err_t result;
 
@@ -136,11 +144,13 @@ acmot_err_t hw_init()
     result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_timer_register_event_callbacks(hTimer_, &cbs, this));
     if (result) goto exit_error_init;
 
+    _pCurSineVal = const_cast<acmot_sineval_t*>(getCurrentSineBuffer().first); // Reset pointer
     ESP_LOGI(TAG,"Motor driver initialize passed!");
 
     return AC_MOTOR_OK;
 
 exit_error_init:
+    ESP_LOGE(TAG,"Error #%d mcpwm-driver fail initialize", result);
     return AC_ERR_MOTOR_INIT_FALURE;
 }
 
@@ -163,60 +173,64 @@ acmot_err_t CMotorDrive::hw_deinit()
     result = mcpwm_del_timer(hTimer_);
     if (result) goto err_hwinit;
 
+    result = hw_set_enabled(false);
+    if (result) goto err_hwinit;
+
     ESP_LOGD(TAG,"Hardware de-initialized");
     return AC_MOTOR_OK;
 
 err_hwinit:
     // TODO: добавить статус/действие критической ошибки переинициализации
+    ESP_LOGE(TAG,"Error #%d mcpwm-driver fail de-initializing", result);
     return result;
 }
 
-// Destructor
-CMotorDrive::~CMotorDrive() {
-    hw_deinit();
+size_t CMotorDrive::calcSineBufferLength(acmot_sinefreq_t sine_wave_freq) noexcept
+{
+    _pCurSineVal = const_cast<acmot_sineval_t*>(getCurrentSineBuffer().first); // Reset pointer
+    return (MOTOR_MCPWM_TIMER_RESOLUTION_HZ/(MOTOR_MCPWM_PERIOD * 4)) / sine_wave_freq;
 }
 
-acmot_err_t CMotorDrive::run()
+acmot_err_t CMotorDrive::hw_run(const acmot_sineval_t powerOut)
 {
+    mcpwm_comparator_set_compare_value(hComparator_, 0);
+
     auto result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_timer_enable(hTimer_));
     if (result) {
-        ESP_LOGE(TAG, "Error #%d: mcpwm timer enable failed",result);
+        ESP_LOGE(TAG, "Error #%d driver mcpwm timer enable failed", result);
         return result;
     }
 
     result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_timer_start_stop(hTimer_, MCPWM_TIMER_START_NO_STOP));
     if (result) {
-        ESP_LOGE(TAG, "error mcpwm timer starting-no-stoping");
-        return result;
+        ESP_LOGE(TAG, "Error #%d driver mcpwm timer start-stop failed", result);
     }
 
-    // result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_comparator_set_compare_value(hComparator_, 100));
-
+    ESP_LOGI(TAG, "Motor driver started.");
+    _pCurSineVal = const_cast<acmot_sineval_t*>(getCurrentSineBuffer().first);  // Reset pointer
     return result;
 }
 
-acmot_err_t CMotorDrive::stop()
+acmot_err_t CMotorDrive::hw_stop()
 {
     // Отправка команды таймеру-генератору ШИМ оставиться при следующем знанчении 0;
     auto result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_timer_start_stop(hTimer_, MCPWM_TIMER_STOP_EMPTY));
-    if (result) return result;
+    if (result) {
+        ESP_LOGE(TAG, "Error #%d driver mcpwm timer stopping", result);
+        return result;
+    }
 
     result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_timer_disable(hTimer_));
+    if (result) {
+        ESP_LOGE(TAG, "Error #%d driver mcpwm timer disabling", result);
+        return result;
+    }
 
+    ESP_LOGI(TAG, "Motor driver stopped.");
     return AC_MOTOR_OK;
 }
 
-acmot_err_t CMotorDrive::setDC(uint16_t pwm_dc)
-{
-
-    ESP_LOGI(TAG, "Set DC value: %d", pwm_dc);
-    auto result = mcpwm_comparator_set_compare_value(hComparator_, pwm_dc);
-
-    return result;
-}
-
-
-acmot_err_t CMotorDrive::hw_enable(bool en)
+acmot_err_t CMotorDrive::hw_set_enabled(bool en)
 {
     acmot_err_t result = AC_MOTOR_OK;
 #ifdef MOTOR_DRV_EN_PIN

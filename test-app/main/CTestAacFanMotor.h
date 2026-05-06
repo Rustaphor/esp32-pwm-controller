@@ -35,4 +35,5 @@ public:
 protected:
     acmot_err_t hw_init() override;
     acmot_err_t hw_deinit() override;
+    acmot_err_t hw_run(const acmot_sineval_t powerOut) override;
 };

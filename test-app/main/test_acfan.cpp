@@ -127,6 +127,33 @@ TEST_CASE("Test AacFanMotor out of range setting power value", "[acfan]"){
     motor.deinitialize();
 }
 
+
+TEST_CASE("Test AacFanMotor run() and stop() methods", "[acfan]"){
+    CTestAacFanMotor motor2{MOTOR_WAVE_FREQ, 100.0f};
+    TEST_ASSERT_EQUAL(AC_ERR_MOTOR_NOT_INITIALIZED, motor2.run());
+    TEST_ASSERT_EQUAL(AC_ERR_MOTOR_NOT_INITIALIZED, motor2.stop());
+    motor2.initialize();
+
+    TEST_ASSERT_FALSE(motor2.run());
+    TEST_ASSERT_EQUAL(motor2.getCurrentState(), AC_MOTOR_IS_RUNNING);
+    TEST_ASSERT_FALSE(motor2.stop());
+    TEST_ASSERT_EQUAL(motor2.getCurrentState(), AC_MOTOR_IS_STOPPED);
+    
+    motor2.deinitialize();
+}
+
+
+TEST_CASE("Test AacFanMotor setting power 0\% as stop command", "[acfan]"){
+    CTestAacFanMotor motor{MOTOR_WAVE_FREQ, 80.0f};
+    motor.initialize();
+
+    motor.run();
+    TEST_ASSERT_FALSE(motor.setPower(0.0f));
+    TEST_ASSERT_EQUAL(motor.getCurrentState(), AC_MOTOR_IS_STOPPED);
+    
+    motor.deinitialize();
+}
+
 #if DISABLED_FOR_TARGETS(linux)
 TEST_CASE("Test CMotorDrive ISR-handler", "[acfan]"){
     CTestAacFanMotor motor{MOTOR_WAVE_FREQ, 100.0f};

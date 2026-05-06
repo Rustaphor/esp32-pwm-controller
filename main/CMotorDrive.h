@@ -11,7 +11,6 @@
 #define MOTOR_MCPWM_PERIOD              942          // 84.925KHz (диапазон значений ШИМ DC 0-100%: 0...MOTOR_MCPWM_PERIOD/2)
 #define MOTOR_WAVE_FREQ                 50           // 50Hz Single phase AC
 #include "AacFanMotor.h"
-// #define MOTOR_SPEED_UPDATE_PERIOD_US    200000      // 200ms
 
 #define MOTOR_DRV_EN_PIN        GPIO_NUM_16
 #define MOTOR_DRV_FAULT_PIN     10
@@ -21,11 +20,6 @@
 // Системный таймер (0 или 1)
 #define MOTOR_DRV_GROUP_ID        0
 
-// #define MOTOR_MCPWM_OP_INDEX_U     0
-// #define MOTOR_MCPWM_OP_INDEX_V     1
-// #define MOTOR_MCPWM_OP_INDEX_W     2
-// #define MOTOR_MCPWM_GEN_INDEX_HIGH 0
-// #define MOTOR_MCPWM_GEN_INDEX_LOW  1
 
 /**
  * @brief A typical C++ class declaration
@@ -36,31 +30,30 @@ class CMotorDrive : public AacFanMotor {
     friend bool pwmtimer_onupdate_isr_cb(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t *edata, void *user_ctx);
 
 public:
-
-    uint32_t count = 0;
     SemaphoreHandle_t hxSem = xSemaphoreCreateCounting(1, 0);
 
     // Constructors
-    CMotorDrive() : AacFanMotor{MOTOR_WAVE_FREQ, 100.0f}, hTimer_{NULL}{};
+    CMotorDrive() : AacFanMotor{MOTOR_WAVE_FREQ, 100.0f}, _direction{1}, hTimer_{NULL} {};
 
     // Destructor
-    ~CMotorDrive();
+    ~CMotorDrive() {
+        hw_deinit();
+    }
+
+    void test_pwm(acmot_sineval_t pwm_value);
     
-    // // Assignment operator
-    // CMotorDrive& operator=(const CMotorDrive& other);
-    acmot_err_t run();
-
-    acmot_err_t stop();
-
-    acmot_err_t setDC(uint16_t pwm_dc);
-
-
 protected:
     acmot_err_t hw_init() override;
-    acmot_err_t hw_enable(bool en);
     acmot_err_t hw_deinit() override;
-    
+    size_t calcSineBufferLength(acmot_sinefreq_t sine_wave_freq) noexcept override;
+    acmot_err_t hw_run(const acmot_sineval_t powerOut) override;
+    acmot_err_t hw_stop() override;
+    acmot_err_t hw_set_enabled(bool en);
+
 private:
+
+    volatile acmot_sineval_t* _pCurSineVal = nullptr;
+    int _direction;
     mcpwm_timer_handle_t hTimer_;
     mcpwm_oper_handle_t hOperator_;
     mcpwm_cmpr_handle_t hComparator_;
