@@ -3,12 +3,14 @@
 #include "esp_timer.h"
 #include "hal/mcpwm_ll.h"
 #include "mcpwm_private.h"
+#include "freertos/semphr.h"
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
 const char* motTAG = "MotorDriver";
 
-
+SemaphoreHandle_t hxSemMot;
+StaticSemaphore_t hxSemMotBuff;
 
 // Обработчик прерывания таймера ШИМ-счетчика
 bool IRAM_ATTR pwmtimer_onupdate_isr_cb(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t *edata, void *user_ctx) {
@@ -154,6 +156,8 @@ acmot_err_t CMotorDrive::hw_init()
     if (result) goto exit_error_init;
 
     _pCurSineVal = const_cast<acmot_sineval_t*>(getCurrentSineBuffer().first); // Reset pointer
+    hxSemMot = xSemaphoreCreateMutexStatic(&hxSemMotBuff);
+
     ESP_LOGI(motTAG,"Motor driver initialize passed!");
 
     return AC_MOTOR_OK;
@@ -186,6 +190,7 @@ acmot_err_t CMotorDrive::hw_deinit()
     if (result) goto err_hwinit;
 
     ESP_LOGD(motTAG,"Hardware de-initialized");
+    vSemaphoreDelete(hxSemMot);
     return AC_MOTOR_OK;
 
 err_hwinit:
