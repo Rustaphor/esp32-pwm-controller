@@ -50,8 +50,8 @@ esp_err_t CUartConsole2::init_periph(void)
     };
 
     /* Install UART driver for interrupt-driven reads and writes */
-    ESP_ERROR_CHECK( uart_driver_install(CONFIG_ESP_CONSOLE_UART_NUM, 256, 0, 0, NULL, 0) );
-    ESP_ERROR_CHECK( uart_param_config(CONFIG_ESP_CONSOLE_UART_NUM, &uart_config) );
+    ESP_ERROR_CHECK( uart_driver_install((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, 256, 0, 0, NULL, 0) );
+    ESP_ERROR_CHECK( uart_param_config((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, &uart_config) );
 
     /* Tell VFS to use UART driver */
     uart_vfs_dev_use_driver(CONFIG_ESP_CONSOLE_UART_NUM);

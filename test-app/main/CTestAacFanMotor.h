@@ -6,8 +6,7 @@
 #define MOTOR_MCPWM_AMPLITUDE           942          // 84.925KHz (фактически диапазон значений установки ШИМ DC 0-100%: 0...MOTOR_MCPWM_PERIOD/2)
 #define MOTOR_WAVE_FREQ                 50           // 50Hz Single phase AC
 
-// ACMOTOR_SINE_MAX_VALUE must be set before including AacFanMotor.h
-#define ACMOTOR_SINE_MAX_VALUE          MOTOR_MCPWM_AMPLITUDE
+
 #include "AacFanMotor.h"
 
 

@@ -15,7 +15,6 @@
 // #include "esp_pthread.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include "consolexec.h"
 
 #include "esp_log.h"
 #include "CMotorDrive.h"
@@ -140,8 +139,6 @@ extern "C" [[noreturn]] void app_main(void)
         ESP_LOGE(TAG,"Error starting timer.");
     }
 
-    // CLI initialization
-    CConsoleExecutor::init();
 
      // Let the main task do something too
     while (true) {

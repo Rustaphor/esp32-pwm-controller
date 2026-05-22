@@ -31,6 +31,6 @@ public:
 
 protected:
 
-    esp_err_t init_periph(void);
+    esp_err_t init_periph(void) override;
     
 };

@@ -44,8 +44,8 @@ esp_err_t AConsole2::_init_console_library(void)
 
     /* Initialize the console */
     esp_console_config_t console_config = {
-            .max_cmdline_args = CONSOLE2_MAX_CMDLINE_ARGS,
             .max_cmdline_length = CONSOLE2_MAX_CMDLINE_LENGTH,
+            .max_cmdline_args = CONSOLE2_MAX_CMDLINE_ARGS,
 #if CONFIG_LOG_COLORS
             .hint_color = atoi(LOG_COLOR_CYAN)
 #endif

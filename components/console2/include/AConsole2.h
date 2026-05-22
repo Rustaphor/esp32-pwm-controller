@@ -29,7 +29,7 @@ class AConsole2 {
 public:
 
     esp_err_t initialize(void);
-    static esp_err_t registerCommand(const string& command, const string& help, const string& hint, int (*func)(int, char**));
+    // static esp_err_t registerCommand(const string& command, const string& help, const string& hint, int (*func)(int, char**));
 
 protected:
 
