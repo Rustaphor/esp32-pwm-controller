@@ -16,6 +16,7 @@ idf_component_register(SRCS "CTestAacFanMotor.cpp" "utest-app.cpp" "test_acfan.c
                     WHOLE_ARCHIVE)
 unset(ADDREQUIRES)
 unset(ADDSRCS)
+unset(MAINAPP_DIR)
 
 set_source_files_properties(utest-app.cpp
     PROPERTIES COMPILE_FLAGS

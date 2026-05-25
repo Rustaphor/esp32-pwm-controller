@@ -42,11 +42,17 @@ esp_err_t CUartConsole2::init_periph(void)
             .data_bits = UART_DATA_8_BITS,
             .parity = UART_PARITY_DISABLE,
             .stop_bits = UART_STOP_BITS_1,
+            .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+            .rx_flow_ctrl_thresh = 0,
 #if SOC_UART_SUPPORT_REF_TICK
             .source_clk = UART_SCLK_REF_TICK,
 #elif SOC_UART_SUPPORT_XTAL_CLK
             .source_clk = UART_SCLK_XTAL,
 #endif
+            .flags = {
+                .allow_pd = 0,
+                .backup_before_sleep = 0
+            }
     };
 
     /* Install UART driver for interrupt-driven reads and writes */
@@ -115,29 +121,29 @@ esp_err_t CUartConsole2::init_periph(void)
 //     ESP_LOGI(logTAG, "Console initialized");
 // }
 
-bool CUartConsole2::registerCommand(const string& command, const string& help, 
-                                const string& hint, int (*func)(int, char**)) {
-    if (!mInitialized) {
-        ESP_LOGE(logTAG, "Console not initialized");
-        return false;
-    }
+// bool CUartConsole2::registerCommand(const string& command, const string& help, 
+//                                 const string& hint, int (*func)(int, char**)) {
+//     if (!mInitialized) {
+//         ESP_LOGE(logTAG, "Console not initialized");
+//         return false;
+//     }
     
-    esp_console_cmd_t cmd = {
-        .command = command.c_str(),
-        .help = help.c_str(),
-        .hint = hint.c_str(),
-        .func = func
-    };
+//     esp_console_cmd_t cmd = {
+//         .command = command.c_str(),
+//         .help = help.c_str(),
+//         .hint = hint.c_str(),
+//         .func = func
+//     };
     
-    esp_err_t err = esp_console_cmd_register(&cmd);
-    if (err != ESP_OK) {
-        ESP_LOGE(logTAG, "Failed to register command '%s': %s", 
-                command.c_str(), esp_err_to_name(err));
-        return false;
-    }
+//     esp_err_t err = esp_console_cmd_register(&cmd);
+//     if (err != ESP_OK) {
+//         ESP_LOGE(logTAG, "Failed to register command '%s': %s", 
+//                 command.c_str(), esp_err_to_name(err));
+//         return false;
+//     }
     
-    ESP_LOGI(logTAG, "Command '%s' registered successfully", command.c_str());
-    return true;
-}
+//     ESP_LOGI(logTAG, "Command '%s' registered successfully", command.c_str());
+//     return true;
+// }
 
 

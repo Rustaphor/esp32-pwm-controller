@@ -37,19 +37,25 @@ end_init:
     return result;
 }
 
+esp_err_t AConsole2::registerCommand(AConsole2Cmd &command)
+{
+    // _commands.push_back(command);
+    return esp_console_cmd_register(&command._console_cmd);
+}
+
 esp_err_t AConsole2::_init_console_library(void)
 {
 
     esp_err_t result;
 
     /* Initialize the console */
-    esp_console_config_t console_config = {
-            .max_cmdline_length = CONSOLE2_MAX_CMDLINE_LENGTH,
-            .max_cmdline_args = CONSOLE2_MAX_CMDLINE_ARGS,
+    esp_console_config_t console_config = ESP_CONSOLE_CONFIG_DEFAULT();
+    console_config.max_cmdline_length = CONSOLE2_MAX_CMDLINE_LENGTH;
+    console_config.max_cmdline_args = CONSOLE2_MAX_CMDLINE_ARGS;
 #if CONFIG_LOG_COLORS
-            .hint_color = atoi(LOG_COLOR_CYAN)
+    console_config.hint_color = atoi(LOG_COLOR_CYAN);
 #endif
-    };
+
 
     result = esp_console_init(&console_config);
     assert(result == ESP_OK);

@@ -1,8 +1,10 @@
 #pragma once
 
 #include <string>
+#include <list>
 #include "sdkconfig.h"
 #include "esp_err.h"
+#include "AConsole2Cmd.h"
 
 // Строка приветствия
 #define PROMPT_STR CONFIG_IDF_TARGET
@@ -25,11 +27,16 @@ typedef enum {
 
 using namespace std;
 
+
+
 class AConsole2 {
+
+    static list<AConsole2Cmd&> _commands;   // Подобрать список уникальных значений
+    
 public:
 
     esp_err_t initialize(void);
-    // static esp_err_t registerCommand(const string& command, const string& help, const string& hint, int (*func)(int, char**));
+    static esp_err_t registerCommand(AConsole2Cmd& command) noexcept;
 
 protected:
 
