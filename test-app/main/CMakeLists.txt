@@ -4,7 +4,7 @@ set(MAINAPP_DIR "${PROJECT_DIR}/../main")
 if(${IDF_TARGET} STREQUAL "linux")
     set(ADDREQUIRES cmock)
 else()
-    set(ADDSRCS "test_console2.cpp")
+    set(ADDSRCS "test_console2.cpp" "${MAINAPP_DIR}/CPwmCtrl.cpp")
     set(ADDREQUIRES console2)
 endif()
 

@@ -27,7 +27,7 @@
     \t pwmcontrol on -if 50 -d 50 \n \
     Created by Vladimir Inshakov, 2026, markoni48@yandex.ru \
     TODO: fill detailed description!"
-#define PROMPT_STR CONFIG_IDF_TARGET
+#define CONSOLE2_PROMPT_STR CONFIG_IDF_TARGET
 
 
 /*
@@ -70,7 +70,7 @@ class CConsoleExecutor {
 
             /* Prompt to be printed before each line.
             * This can be customized, made dynamic, etc. */
-            repl_config.prompt = PROMPT_STR ">";
+            repl_config.prompt = CONSOLE2_PROMPT_STR ">";
             repl_config.max_cmdline_length = CONFIG_CONSOLE_MAX_COMMAND_LINE_LENGTH;
 
             /* Register commands */

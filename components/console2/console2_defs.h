@@ -1,5 +1,9 @@
 #pragma once 
 
+#include "sdkconfig.h"
+
+// Строка приветствия
+#define CONSOLE2_PROMPT_STR CONFIG_IDF_TARGET
 #define CONSOLE2_MAX_CMDLINE_ARGS 8
 #define CONSOLE2_MAX_CMDLINE_LENGTH 256
 #define CONSOLE2_PROMPT_MAX_LEN (32)

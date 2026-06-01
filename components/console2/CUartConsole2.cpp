@@ -10,9 +10,11 @@
 #include "driver/usb_serial_jtag.h"
 #include "driver/usb_serial_jtag_vfs.h"
 #include "esp_vfs_cdcacm.h"
+#include "linenoise/linenoise.h"
+
 // #include "console2_defs.h"
 
-static const char* logTAG = __FILE_NAME__;
+static const char* logTAG = "Console2";
 
 CUartConsole2::CUartConsole2() {
     ESP_LOGI(logTAG, "CUartConsole2 constructor called");
@@ -21,6 +23,7 @@ CUartConsole2::CUartConsole2() {
 CUartConsole2::~CUartConsole2() {
     ESP_LOGI(logTAG, "CUartConsole2 destructor called");
 }
+
 
 esp_err_t CUartConsole2::init_periph(void)
 {

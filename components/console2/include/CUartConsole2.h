@@ -2,11 +2,10 @@
 
 
 #include "AConsole2.h"
+#include <stdio.h>
 #include <unistd.h>
-
 #include "esp_system.h"
 #include "esp_console.h"
-
 
 
 /*
@@ -21,8 +20,8 @@
 #endif
 
 
-
 class CUartConsole2 : public AConsole2{
+
 
 public:
     CUartConsole2();
