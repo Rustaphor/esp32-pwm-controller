@@ -4,7 +4,7 @@
 #include <iostream>
 #include <utility>
 
-static const char* logTAG = __FILE_NAME__;       // Локальный тег логирования модуля
+static const char* logCons2TAG = __FILE_NAME__;       // Локальный тег логирования модуля
 
 
 

@@ -5,8 +5,6 @@
 #include "sdkconfig.h"
 #include "esp_err.h"
 #include "AConsole2Cmd.h"
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
 
 
 #define CONSOLE2_PROMPT_MAX_LENGTH 16
@@ -28,7 +26,6 @@ typedef enum {
 
 
 using namespace std;
-
 
 
 class AConsole2 {
@@ -58,8 +55,6 @@ protected:
 
 private:
 
-    static TaskHandle_t _proc_data_hdl;
-    static void _vTaskConsole2(void *pvParameters);
     esp_err_t _init_console_library(void);
 };
 

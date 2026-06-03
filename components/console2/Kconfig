@@ -1,17 +1,16 @@
 menu "Console2 Component"
 
-    config CONSOLE2_SORTED_HELP
-        bool "Enable sorted help"
-        default n
-        help
-            Instead of listing the commands in the order of registration, the help command lists
-            the available commands in sorted order, if this option is enabled.
-
     config CONSOLE2_MAX_COMMAND_LINE_LENGTH
         int "Maximum command line length"
-        default 1024
+        default 256
         help
             This value marks the maximum length of a single command line. Once it is
             reached, no more characters will be accepted by the console.
+
+    config CONSOLE2_TASK_HEAP_STACK_SIZE
+        int "Stack size for Console FreeRTOS task"
+        default 4096
+        help
+            Stack size in byrtes. Set size more than 2048 bytes.
 
 endmenu

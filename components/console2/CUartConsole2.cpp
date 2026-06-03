@@ -14,14 +14,14 @@
 
 // #include "console2_defs.h"
 
-static const char* logTAG = "Console2";
+static const char* logCons2TAG = "Console2";
 
 CUartConsole2::CUartConsole2() {
-    ESP_LOGI(logTAG, "CUartConsole2 constructor called");
+    ESP_LOGI(logCons2TAG, "CUartConsole2 constructor called");
 }
 
 CUartConsole2::~CUartConsole2() {
-    ESP_LOGI(logTAG, "CUartConsole2 destructor called");
+    ESP_LOGI(logCons2TAG, "CUartConsole2 destructor called");
 }
 
 
@@ -59,7 +59,7 @@ esp_err_t CUartConsole2::init_periph(void)
     };
 
     /* Install UART driver for interrupt-driven reads and writes */
-    ESP_ERROR_CHECK( uart_driver_install((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, 256, 0, 0, NULL, 0) );
+    ESP_ERROR_CHECK( uart_driver_install((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, 256, 0, 0, &_huart_queue, 0) );
     ESP_ERROR_CHECK( uart_param_config((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, &uart_config) );
 
     /* Tell VFS to use UART driver */
@@ -108,7 +108,7 @@ esp_err_t CUartConsole2::init_periph(void)
 
 // esp_err_t CUartConsole2::init() {
 //     if (_conStatus == CONSOLE_STATUS_INITIALIZED) {
-//         ESP_LOGW(logTAG, "Console already initialized");
+//         ESP_LOGW(logCons2TAG, "Console already initialized");
 //         return ESP_ERR_NOT_ALLOWED;
 //     }
 
@@ -121,13 +121,13 @@ esp_err_t CUartConsole2::init_periph(void)
 //     register_system_common();
     
 //     mInitialized = true;
-//     ESP_LOGI(logTAG, "Console initialized");
+//     ESP_LOGI(logCons2TAG, "Console initialized");
 // }
 
 // bool CUartConsole2::registerCommand(const string& command, const string& help, 
 //                                 const string& hint, int (*func)(int, char**)) {
 //     if (!mInitialized) {
-//         ESP_LOGE(logTAG, "Console not initialized");
+//         ESP_LOGE(logCons2TAG, "Console not initialized");
 //         return false;
 //     }
     
@@ -140,12 +140,12 @@ esp_err_t CUartConsole2::init_periph(void)
     
 //     esp_err_t err = esp_console_cmd_register(&cmd);
 //     if (err != ESP_OK) {
-//         ESP_LOGE(logTAG, "Failed to register command '%s': %s", 
+//         ESP_LOGE(logCons2TAG, "Failed to register command '%s': %s", 
 //                 command.c_str(), esp_err_to_name(err));
 //         return false;
 //     }
     
-//     ESP_LOGI(logTAG, "Command '%s' registered successfully", command.c_str());
+//     ESP_LOGI(logCons2TAG, "Command '%s' registered successfully", command.c_str());
 //     return true;
 // }
 
