@@ -14,7 +14,7 @@ typedef enum {
     CONSOLE_STATUS_INITIALIZED,
     CONSOLE_STATUS_RUNNING,
     CONSOLE_STATUS_SUSPENDED
-} console_status;
+} console2_status;
 
 /* Console command history can be stored to and loaded from a memory.
  * TODO: Реализовать историю в память
@@ -27,6 +27,17 @@ typedef enum {
 
 using namespace std;
 
+// Component Log Tag
+static const char logConsole2Tag[] = "Console";
+
+enum CONSOLE2_KEY_ACTION {
+	CTRL_C = 3,         /* Ctrl-c */
+    CTRL_X = 24,        /* Ctrl-x */
+	CTRL_D = 4,         /* Ctrl-d */
+	ENTER = 13,         /* Enter */
+	ESC = 27            /* Escape */
+};
+
 
 class AConsole2 {
 
@@ -34,23 +45,49 @@ class AConsole2 {
     
 public:
 
+    /**
+     * Инициализация и деинициализация консоли
+     * 
+     * @details Инициали
+     */
     esp_err_t initialize(void);
+
+    /**
+     * Деинициализация консоли
+     * 
+     * @details Метод вызывается по команде выхода из консоли (`exit`, `Ctrl-c`, `Esc`, `Ctrl-x`)
+     */
+    esp_err_t deinitialize(void);
+
+    /**
+     * Регистрация команды в консоли
+     */
     static esp_err_t registerCommand(AConsole2Cmd& command) noexcept;
 
-    esp_err_t run(void);
+    /**
+     * Запуск консоли из режима ожидания
+     * 
+     * @details Команда должна создавать поток (задачу) в которой будет работать библиотека консоли *linenoise*
+     */
+    virtual esp_err_t run(void) = 0;
 
 
 protected:
 
-    /**
-     * Вызывается из initialize()
-     */
+    // Вызывается из initialize()
     virtual esp_err_t init_periph(void) = 0;
+
+    /**
+     * Деинициализация периферии консоли
+     * 
+     * @details Метод должен освобожлать все ресурсы, работать противоположно методу `run`. По результату консоль должна вернуть в режим повторного запуска.
+     */
+    virtual esp_err_t deinit_periph(void) = 0;
     // virtual boolean init_commands(void) {
 
     char* setup_prompt(const char* prompt_str = NULL);
 
-    console_status conStatus = CONSOLE_STATUS_NOT_INITIALIZED;
+    console2_status conStatus = CONSOLE_STATUS_NOT_INITIALIZED;
     static char prompt[CONSOLE2_PROMPT_MAX_LENGTH];
 
 private:

@@ -3,10 +3,9 @@
 #include <fcntl.h>
 #include "esp_log.h"
 #include "esp_console.h"
-#include "sdkconfig.h"
 #include "soc/soc_caps.h"
 #include "driver/uart_vfs.h"
-#include "driver/uart.h"
+#include "hal/uart_ll.h"
 #include "driver/usb_serial_jtag.h"
 #include "driver/usb_serial_jtag_vfs.h"
 #include "esp_vfs_cdcacm.h"
@@ -14,16 +13,10 @@
 
 // #include "console2_defs.h"
 
-static const char* logCons2TAG = "Console2";
 
 CUartConsole2::CUartConsole2() {
-    ESP_LOGI(logCons2TAG, "CUartConsole2 constructor called");
+    ESP_LOGI(logConsole2Tag, "CUartConsole2 constructor called");
 }
-
-CUartConsole2::~CUartConsole2() {
-    ESP_LOGI(logCons2TAG, "CUartConsole2 destructor called");
-}
-
 
 esp_err_t CUartConsole2::init_periph(void)
 {
@@ -59,7 +52,7 @@ esp_err_t CUartConsole2::init_periph(void)
     };
 
     /* Install UART driver for interrupt-driven reads and writes */
-    ESP_ERROR_CHECK( uart_driver_install((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, 256, 0, 0, &_huart_queue, 0) );
+    ESP_ERROR_CHECK( uart_driver_install((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, CONSOLE2_UART_BUFF_SIZE, 0, 2, &_hUartQueue, 0) );
     ESP_ERROR_CHECK( uart_param_config((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, &uart_config) );
 
     /* Tell VFS to use UART driver */
@@ -106,9 +99,76 @@ esp_err_t CUartConsole2::init_periph(void)
     return ESP_OK;
 }
 
+esp_err_t CUartConsole2::init_console_periph(void)
+{
+    esp_err_t result = ESP_OK;
+
+_exit:
+    if (result != ESP_OK) {
+        ESP_LOGE(logConsole2Tag, "Error %d failed to initialize console", result);
+    }
+    return result;
+}
+
+inline esp_err_t CUartConsole2::_init_n_enable_isr(void)
+{
+    // Configure a UART interrupt threshold and timeout
+    const uart_intr_config_t uart_intr = {
+        .intr_enable_mask = UART_INTR_RXFIFO_TOUT | UART_INTR_RXFIFO_FULL,
+        .rx_timeout_thresh = 100,
+        .txfifo_empty_intr_thresh = 100,
+        .rxfifo_full_thresh = 100
+    };
+    esp_err_t result = uart_intr_config(CONSOLE2_UART_NUM, &uart_intr);
+    if (result) return result;
+    return uart_enable_rx_intr(CONSOLE2_UART_NUM);
+}
+
+void CUartConsole2::_onReceiveBytesEventHandler(unsigned char* pChar, size_t sz)
+{
+    if (pChar[0] == ENTER) {
+        _disable_isr();
+        ESP_LOGD(logConsole2Tag, "Received command to start command line interface!");
+        init_console_periph();
+    }
+}
+
+esp_err_t CUartConsole2::switchState(console2_status state)
+{
+    esp_err_t result = ESP_OK;
+
+    if(conStatus == CONSOLE_STATUS_NOT_INITIALIZED) {
+        result = ESP_ERR_INVALID_STATE;
+        goto _exit;
+    } else if (state == conStatus) return ESP_OK;
+
+    switch(state) {
+
+        case CONSOLE_STATUS_INITIALIZED:
+        case CONSOLE_STATUS_SUSPENDED:
+            result = _init_n_enable_isr();
+            break;
+
+        case CONSOLE_STATUS_RUNNING:
+            result = _disable_isr();
+            break;
+
+        default:
+            break;
+    }
+
+    ESP_LOGD(logConsole2Tag, "Switched console state to %d", state);
+
+_exit:
+    if (result != ESP_OK) {
+        ESP_LOGE(logConsole2Tag, "Error %d failed to switch console state to %d", result, state);
+    }
+    return result;
+}
+
 // esp_err_t CUartConsole2::init() {
 //     if (_conStatus == CONSOLE_STATUS_INITIALIZED) {
-//         ESP_LOGW(logCons2TAG, "Console already initialized");
+//         ESP_LOGW(logConsole2Tag, "Console already initialized");
 //         return ESP_ERR_NOT_ALLOWED;
 //     }
 
@@ -121,13 +181,13 @@ esp_err_t CUartConsole2::init_periph(void)
 //     register_system_common();
     
 //     mInitialized = true;
-//     ESP_LOGI(logCons2TAG, "Console initialized");
+//     ESP_LOGI(logConsole2Tag, "Console initialized");
 // }
 
 // bool CUartConsole2::registerCommand(const string& command, const string& help, 
 //                                 const string& hint, int (*func)(int, char**)) {
 //     if (!mInitialized) {
-//         ESP_LOGE(logCons2TAG, "Console not initialized");
+//         ESP_LOGE(logConsole2Tag, "Console not initialized");
 //         return false;
 //     }
     
@@ -140,12 +200,12 @@ esp_err_t CUartConsole2::init_periph(void)
     
 //     esp_err_t err = esp_console_cmd_register(&cmd);
 //     if (err != ESP_OK) {
-//         ESP_LOGE(logCons2TAG, "Failed to register command '%s': %s", 
+//         ESP_LOGE(logConsole2Tag, "Failed to register command '%s': %s", 
 //                 command.c_str(), esp_err_to_name(err));
 //         return false;
 //     }
     
-//     ESP_LOGI(logCons2TAG, "Command '%s' registered successfully", command.c_str());
+//     ESP_LOGI(logConsole2Tag, "Command '%s' registered successfully", command.c_str());
 //     return true;
 // }
 

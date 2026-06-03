@@ -6,7 +6,6 @@
 #include "linenoise/linenoise.h"
 #include "console2_defs.h"
 
-static const char* logCons2TAG = "Console2";
 
 esp_err_t AConsole2::initialize(void)
 {
@@ -19,18 +18,18 @@ esp_err_t AConsole2::initialize(void)
 
     result = init_periph();
     if (result) {
-        ESP_LOGE(logCons2TAG, "Failed to initialize console peripherals!");
+        ESP_LOGE(logConsole2Tag, "Failed to initialize console peripherals!");
         goto end_init;
     }
 
     result = _init_console_library();
     if (result) {
-        ESP_LOGE(logCons2TAG, "Failed to initialize console library!");
+        ESP_LOGE(logConsole2Tag, "Failed to initialize console library!");
         goto end_init;
     }
 
     conStatus = CONSOLE_STATUS_INITIALIZED;
-    ESP_LOGI(logCons2TAG, "Console2 component initialized");
+    ESP_LOGD(logConsole2Tag, "Console2 component initialized");
 
 end_init:
     return result;
@@ -39,7 +38,7 @@ end_init:
 esp_err_t AConsole2::registerCommand(AConsole2Cmd &command)
 {
     // _commands.push_back(command);
-    ESP_LOGI(logCons2TAG, "Registering console command: %s", command._console_cmd.command);
+    ESP_LOGI(logConsole2Tag, "Registering console command: %s", command._console_cmd.command);
     return esp_console_cmd_register(&command._console_cmd);
 }
 

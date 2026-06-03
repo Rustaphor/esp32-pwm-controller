@@ -8,9 +8,7 @@
 #include "sdkconfig.h"
 #include "esp_log.h"
 #include "esp_system.h"
-#include "esp_console.h"
 #include "driver/uart.h"
-#include "hal/uart_ll.h"
 #include "freertos/queue.h"
 
 
@@ -26,64 +24,51 @@
 #endif
 
 #define CONSOLE2_UART_NUM UART_NUM_0
+#define CONSOLE2_UART_BUFF_SIZE 256
 
 // CONFIG_ESP_CONSOLE_UART_NUM
-
-extern const char* logCons2TAG;
 
 
 class CUartConsole2 : public AConsole2{
 
-    static QueueHandle_t _huart_queue;
+    QueueHandle_t _hUartQueue;
+    uart_event_t event;
+    unsigned char ch[1];
 
 public:
     CUartConsole2();
-    ~CUartConsole2();
 
-    inline void dispatchFromTask(void){
-        uart_event_t event;
-        uint8_t pByte[2];
+    esp_err_t switchState(console2_status state);
+
+    // Dispatch infinitive Loop from any Task (no blocking)
+    inline void dispatch_loop(void){
 
         // Wait until UART_DATA event is triggered
-        if (xQueueReceive(_huart_queue, (void*) &event, (TickType_t) portMAX_DELAY)) {
+        if (xQueueReceive(_hUartQueue, (void*) &event, 0)) {
 
-            ESP_LOGI(logCons2TAG, "Interrupt type is: %d", event.type);
-
-            
             // Данные в буфере
             if (event.type == UART_DATA) {
+                uart_read_bytes(CONSOLE2_UART_NUM, ch, sizeof(ch), portMAX_DELAY);
+                _onReceiveBytesEventHandler(ch, sizeof(ch));
 
-                    ESP_LOGI(logCons2TAG, "[UART DATA]: %d", event.size);
-                    uart_read_bytes(CONSOLE2_UART_NUM, pByte, sizeof(pByte), portMAX_DELAY);
-
-                    // There used to be a UART_PATTERN_DET event, but the pattern position queue is full so that it can not
-                    // record the position. We should set a larger queue size.
-                    // As an example, we directly flush the rx buffer here.
-                    uart_flush_input(CONSOLE2_UART_NUM);
+                // There used to be a UART_PATTERN_DET event, but the pattern position queue is full so that it can not
+                // record the position. We should set a larger queue size.
+                // Directly flush the rx buffer here.
+                uart_flush_input(CONSOLE2_UART_NUM);
             }
+
         }
     }
 
 protected:
 
     esp_err_t init_periph(void) override;
-
-    esp_err_t on(void);
-    esp_err_t off(void);
+// esp_err_t deinit_periph(void) override;
+    esp_err_t init_console_periph(void);
 
 private:
 
-    inline esp_err_t _init_isr(void) {
-        // Configure a UART interrupt threshold and timeout
-        const uart_intr_config_t uart_intr = {
-            .intr_enable_mask = UART_INTR_CMD_CHAR_DET,
-            .rx_timeout_thresh = 100,
-            .txfifo_empty_intr_thresh = 100,
-            .rxfifo_full_thresh = 100
-        };
-        return uart_intr_config(CONSOLE2_UART_NUM, &uart_intr);
-    }
-
+    esp_err_t _init_n_enable_isr(void);
     inline esp_err_t _disable_isr(void) { return uart_disable_rx_intr(CONSOLE2_UART_NUM); }
-    
+    void _onReceiveBytesEventHandler(unsigned char* pChar, size_t sz);
 };

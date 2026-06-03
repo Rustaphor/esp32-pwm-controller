@@ -19,6 +19,8 @@
 #include "esp_log.h"
 #include "CMotorDrive.h"
 
+#include "CUartConsole2.h"
+
 
 
 
@@ -32,7 +34,7 @@ using namespace std::chrono;
  #define NUM_TIMERS 1
  TimerHandle_t xTimers[NUM_TIMERS];
  
- const auto sleep_time = seconds{1};
+ const auto sleep_time = seconds{2};
 
 CMotorDrive motor;
 
@@ -103,7 +105,7 @@ CMotorDrive motor;
 //     cfg.prio = prio;
 //     return cfg;
 // }
-
+CUartConsole2 myConsole;
 
 extern "C" [[noreturn]] void app_main(void)
 {
@@ -114,6 +116,12 @@ extern "C" [[noreturn]] void app_main(void)
     motor.initialize();
     this_thread::sleep_for(milliseconds{200});
     motor.run();
+
+    myConsole.initialize();
+    ESP_LOGI(TAG, "Console2 tage: %s.", logConsole2Tag);
+
+    myConsole.switchState(CONSOLE_STATUS_SUSPENDED);
+    
 
     // wifi_initialize(WIFI_MODE_APSTA);
     
@@ -142,9 +150,11 @@ extern "C" [[noreturn]] void app_main(void)
 
      // Let the main task do something too
     while (true) {
-        xSemaphoreTake(motor.hxSem, portMAX_DELAY);
+        // xSemaphoreTake(motor.hxSem, portMAX_DELAY);
 
-        this_thread::sleep_for(sleep_time);
+        myConsole.dispatch_loop();
+
+        // this_thread::sleep_for(sleep_time);
 
     }
 }
