@@ -15,15 +15,26 @@
 // #include "console2_defs.h"
 
 
-CUartConsole2::CUartConsole2() {
-    ESP_LOGI(logConsole2Tag, "CUartConsole2 constructor called");
-}
-
 esp_err_t CUartConsole2::start(void)
 {
     esp_err_t result = ESP_OK;
 
+#if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || defined(CONFIG_ESP_CONSOLE_UART_CUSTOM)
     _disable_isr();
+#endif
+    
+    // TODO: Реализовать запуск консоли
+
+    return result;
+}
+
+esp_err_t CUartConsole2::do_stop(void)
+{
+    esp_err_t result = ESP_OK;
+
+#if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || defined(CONFIG_ESP_CONSOLE_UART_CUSTOM)
+    result = _init_n_enable_isr();
+#endif
     
     // TODO: Реализовать запуск консоли
 
@@ -64,11 +75,16 @@ esp_err_t CUartConsole2::init_periph(void)
     };
 
     /* Install UART driver for interrupt-driven reads and writes */
-    ESP_ERROR_CHECK( uart_driver_install((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, CONSOLE2_UART_BUFF_SIZE, 0, 2, NULL, 0) );
+    ESP_ERROR_CHECK( uart_driver_install((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, CONSOLE2_UART_BUFF_SIZE, 0, 2, &_hUartQueue, 0) );
     ESP_ERROR_CHECK( uart_param_config((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, &uart_config) );
 
     /* Tell VFS to use UART driver */
     uart_vfs_dev_use_driver(CONFIG_ESP_CONSOLE_UART_NUM);
+
+    /* Enable interrupt to receive bytes */
+    if (_init_n_enable_isr()) {
+        ESP_LOGE(logConsole2Tag, "Error initializing UART interrupt");
+    }
 
 #elif defined(CONFIG_ESP_CONSOLE_USB_CDC)
     /* Minicom, screen, idf_monitor send CR when ENTER key is pressed */
@@ -132,18 +148,12 @@ inline esp_err_t CUartConsole2::_init_n_enable_isr(void)
         .rxfifo_full_thresh = 100
     };
     esp_err_t result = uart_intr_config(CONSOLE2_UART_NUM, &uart_intr);
-    if (result) return result;
-    return uart_enable_rx_intr(CONSOLE2_UART_NUM);
+    if (!result) {
+        result = uart_enable_rx_intr(CONSOLE2_UART_NUM);
+    }
+    return result;
 }
 
-void CUartConsole2::_onReceiveBytesEventHandler(unsigned char* pChar, size_t sz)
-{
-    // Команда запуска консоли
-    if (pChar[0] == ENTER) {
-        _disable_isr();
-        run();
-    }
-}
 
 // esp_err_t CUartConsole2::init() {
 //     if (_conStatus == CONSOLE_STATUS_INITIALIZED) {

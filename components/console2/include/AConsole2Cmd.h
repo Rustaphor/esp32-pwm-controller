@@ -9,8 +9,17 @@ class AConsole2;
 
 using namespace std;
 
+// Component Log Tag
+static const char logConsole2Tag[] = "Console";
 
-#define console2_logTAG     "CONSOLE2"
+enum CONSOLE2_KEY_ACTION {
+	CTRL_C = 3,         /* Ctrl-c */
+    CTRL_X = 24,        /* Ctrl-x */
+	CTRL_D = 4,         /* Ctrl-d */
+	ENTER = 13,         /* Enter */
+	ESC = 27            /* Escape */
+};
+
 
 class AConsole2Cmd {
 
@@ -53,7 +62,7 @@ protected:
     // Функция обратного вызова команды для сопряжения с библиотекой esp_console
     static int exec_func_cb(void *context, int argc, char** argv) {
         AConsole2Cmd *cmd = (AConsole2Cmd*) context;
-        ESP_LOGD(console2_logTAG, "Run console2 command: %s", cmd->_console_cmd.command);
+        ESP_LOGD(logConsole2Tag, "Run CLI command: %s", cmd->_console_cmd.command);
         return cmd->exec_func_cb(argc, argv);
     };
 

@@ -31,6 +31,9 @@ esp_err_t AConsole2::initialize(void)
     conStatus = CONSOLE_STATUS_INITIALIZED;
     ESP_LOGD(logConsole2Tag, "Console2 component initialized");
 
+    // Строка приветствия в консоли
+    printf(getGreetingsMsg());
+
 end_init:
     return result;
 }
@@ -46,22 +49,23 @@ esp_err_t AConsole2::run(void)
 {
     esp_err_t result = ESP_OK;
 
-    if (conStatus != CONSOLE_STATUS_NOT_INITIALIZED) {
+    if (conStatus == CONSOLE_STATUS_NOT_INITIALIZED) {
         result = ESP_ERR_NOT_ALLOWED;
+        goto _exit;
+    } else if (conStatus == CONSOLE_STATUS_RUNNED) {
         goto _exit;
     }
 
     result = start();
 
     if (result == ESP_OK) {
-        conStatus = CONSOLE_STATUS_RUNNING;
+        conStatus = CONSOLE_STATUS_RUNNED;
         ESP_LOGD(logConsole2Tag, "Console component started");
+        return ESP_OK;
     }
 
 _exit:
-    if (result) {
-        ESP_LOGE(logConsole2Tag, "Error: %d. Failed to start console!", result);
-    }
+    ESP_LOGE(logConsole2Tag, "Error: %d. Failed to start console!", result);
     return result;
 }
 
@@ -72,7 +76,7 @@ esp_err_t AConsole2::_init_console_library(void)
 
     /* Initialize the console */
     esp_console_config_t console_config = ESP_CONSOLE_CONFIG_DEFAULT();
-    console_config.max_cmdline_length = CONSOLE2_MAX_CMDLINE_LENGTH;
+    console_config.max_cmdline_length = CONFIG_CONSOLE2_MAX_COMMAND_LINE_LENGTH;
     console_config.max_cmdline_args = CONSOLE2_MAX_CMDLINE_ARGS;
 #if CONFIG_LOG_COLORS
     console_config.hint_color = atoi(LOG_COLOR_CYAN);

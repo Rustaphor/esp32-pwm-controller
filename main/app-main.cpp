@@ -118,9 +118,7 @@ extern "C" [[noreturn]] void app_main(void)
     motor.run();
 
     myConsole.initialize();
-    ESP_LOGI(TAG, "Console2 tage: %s.", logConsole2Tag);
   
-
     // wifi_initialize(WIFI_MODE_APSTA);
     
     // // Create a thread using default values that can run on any core
@@ -152,7 +150,6 @@ extern "C" [[noreturn]] void app_main(void)
 
         myConsole.dispatch_loop();
 
-        this_thread::sleep_for(sleep_time);
 
     }
 }

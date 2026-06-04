@@ -6,37 +6,21 @@
 #include "esp_err.h"
 #include "AConsole2Cmd.h"
 
-
 #define CONSOLE2_PROMPT_MAX_LENGTH 16
 
 typedef enum {
     CONSOLE_STATUS_NOT_INITIALIZED = 0x100,
     CONSOLE_STATUS_INITIALIZED,
-    CONSOLE_STATUS_RUNNING,
-    CONSOLE_STATUS_SUSPENDED
+    CONSOLE_STATUS_RUNNED
 } console2_status;
 
-/* Console command history can be stored to and loaded from a memory.
- * TODO: Реализовать историю в память
- */
+/* Console command history can be stored to and loaded from a memory. */
 #if CONFIG_CONSOLE_STORE_HISTORY
-
-
+ // TODO: Реализовать историю в память
 #endif // CONFIG_CONSOLE_STORE_HISTORY
 
 
 using namespace std;
-
-// Component Log Tag
-static const char logConsole2Tag[] = "Console";
-
-enum CONSOLE2_KEY_ACTION {
-	CTRL_C = 3,         /* Ctrl-c */
-    CTRL_X = 24,        /* Ctrl-x */
-	CTRL_D = 4,         /* Ctrl-d */
-	ENTER = 13,         /* Enter */
-	ESC = 27            /* Escape */
-};
 
 
 class AConsole2 {
@@ -46,11 +30,16 @@ class AConsole2 {
 public:
 
     /**
+     * Получить текущее состояние консоли
+     */
+    console2_status getState(void) noexcept { return conStatus; }
+
+    /**
      * Инициализация и деинициализация консоли
      * 
      * @details Инициали
      */
-    esp_err_t initialize(void);
+    esp_err_t initialize(void) noexcept;
 
     /**
      * Регистрация команды в консоли
@@ -62,7 +51,10 @@ public:
      * 
      * @details Команда должна создавать поток (задачу) в которой будет работать библиотека консоли *linenoise*. Вызывает метод `start()`
      */
-    esp_err_t run(void);
+    esp_err_t run(void) noexcept;
+
+
+    // esp_err_t stop(void) noexcept;
 
 
 protected:
@@ -72,6 +64,14 @@ protected:
 
     // Вызывается из run()
     virtual esp_err_t start(void) = 0;
+
+    // Вызывается из stop()
+    virtual esp_err_t do_stop(void) = 0;
+
+    static const char* getGreetingsMsg(void) {
+        static const char* greetings = "Press <ENTER> to enter command line interface.\n\r";
+        return greetings;
+    }
 
     char* setup_prompt(const char* prompt_str = NULL);
 
