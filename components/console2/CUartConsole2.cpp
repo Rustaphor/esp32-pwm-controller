@@ -23,6 +23,9 @@ esp_err_t CUartConsole2::start(void)
 {
     esp_err_t result = ESP_OK;
 
+    _disable_isr();
+    
+    // TODO: Реализовать запуск консоли
 
     return result;
 }
@@ -135,44 +138,11 @@ inline esp_err_t CUartConsole2::_init_n_enable_isr(void)
 
 void CUartConsole2::_onReceiveBytesEventHandler(unsigned char* pChar, size_t sz)
 {
+    // Команда запуска консоли
     if (pChar[0] == ENTER) {
         _disable_isr();
-        ESP_LOGD(logConsole2Tag, "Received command to start command line interface!");
-        init_console_periph();
+        run();
     }
-}
-
-esp_err_t CUartConsole2::switchState(console2_status state)
-{
-    esp_err_t result = ESP_OK;
-
-    if(conStatus == CONSOLE_STATUS_NOT_INITIALIZED) {
-        result = ESP_ERR_INVALID_STATE;
-        goto _exit;
-    } else if (state == conStatus) return ESP_OK;
-
-    switch(state) {
-
-        case CONSOLE_STATUS_INITIALIZED:
-        case CONSOLE_STATUS_SUSPENDED:
-            result = _init_n_enable_isr();
-            break;
-
-        case CONSOLE_STATUS_RUNNING:
-            result = _disable_isr();
-            break;
-
-        default:
-            break;
-    }
-
-    ESP_LOGD(logConsole2Tag, "Switched console state to %d", state);
-
-_exit:
-    if (result != ESP_OK) {
-        ESP_LOGE(logConsole2Tag, "Error %d failed to switch console state to %d", result, state);
-    }
-    return result;
 }
 
 // esp_err_t CUartConsole2::init() {

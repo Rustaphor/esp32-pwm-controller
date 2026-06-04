@@ -119,9 +119,7 @@ extern "C" [[noreturn]] void app_main(void)
 
     myConsole.initialize();
     ESP_LOGI(TAG, "Console2 tage: %s.", logConsole2Tag);
-
-    myConsole.switchState(CONSOLE_STATUS_SUSPENDED);
-    
+  
 
     // wifi_initialize(WIFI_MODE_APSTA);
     
@@ -154,7 +152,7 @@ extern "C" [[noreturn]] void app_main(void)
 
         myConsole.dispatch_loop();
 
-        // this_thread::sleep_for(sleep_time);
+        this_thread::sleep_for(sleep_time);
 
     }
 }

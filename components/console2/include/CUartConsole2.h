@@ -9,6 +9,7 @@
 #include "driver/uart.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include <iostream>
 
 
 /*
@@ -35,14 +36,18 @@ class CUartConsole2 : public AConsole2{
 public:
     CUartConsole2();
 
-    esp_err_t switchState(console2_status state);
-
     // Dispatch infinitive Loop from any Task (no blocking)
     inline void dispatch_loop(void){
 
-        int	value = getchar();
+        int	value;
 
-        ESP_LOGD(logConsole2Tag, "Receive value: %d", value);
+        if (!cin.fail()) {
+            value = cin.get();
+            ESP_LOGD(logConsole2Tag, "Receive value: %d", value);
+
+        }
+
+        ESP_LOGD(logConsole2Tag, "Wait for character");
 
         // // Wait until UART_DATA event is triggered
         // if (xQueueReceive(_hUartQueue, (void*) &event, 0)) {
@@ -70,7 +75,7 @@ protected:
 
 private:
 
-    esp_err_t _init_n_enable_isr(void);
+    inline esp_err_t _init_n_enable_isr(void);
     inline esp_err_t _disable_isr(void) { return uart_disable_rx_intr(CONSOLE2_UART_NUM); }
     void _onReceiveBytesEventHandler(unsigned char* pChar, size_t sz);
 };
