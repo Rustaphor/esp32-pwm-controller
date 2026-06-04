@@ -11,11 +11,20 @@
 #include "esp_vfs_cdcacm.h"
 #include "linenoise/linenoise.h"
 
+
 // #include "console2_defs.h"
 
 
 CUartConsole2::CUartConsole2() {
     ESP_LOGI(logConsole2Tag, "CUartConsole2 constructor called");
+}
+
+esp_err_t CUartConsole2::start(void)
+{
+    esp_err_t result = ESP_OK;
+
+
+    return result;
 }
 
 esp_err_t CUartConsole2::init_periph(void)
@@ -52,7 +61,7 @@ esp_err_t CUartConsole2::init_periph(void)
     };
 
     /* Install UART driver for interrupt-driven reads and writes */
-    ESP_ERROR_CHECK( uart_driver_install((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, CONSOLE2_UART_BUFF_SIZE, 0, 2, &_hUartQueue, 0) );
+    ESP_ERROR_CHECK( uart_driver_install((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, CONSOLE2_UART_BUFF_SIZE, 0, 2, NULL, 0) );
     ESP_ERROR_CHECK( uart_param_config((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, &uart_config) );
 
     /* Tell VFS to use UART driver */
@@ -103,7 +112,7 @@ esp_err_t CUartConsole2::init_console_periph(void)
 {
     esp_err_t result = ESP_OK;
 
-_exit:
+
     if (result != ESP_OK) {
         ESP_LOGE(logConsole2Tag, "Error %d failed to initialize console", result);
     }

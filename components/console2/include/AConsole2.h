@@ -53,23 +53,16 @@ public:
     esp_err_t initialize(void);
 
     /**
-     * Деинициализация консоли
-     * 
-     * @details Метод вызывается по команде выхода из консоли (`exit`, `Ctrl-c`, `Esc`, `Ctrl-x`)
-     */
-    esp_err_t deinitialize(void);
-
-    /**
      * Регистрация команды в консоли
      */
     static esp_err_t registerCommand(AConsole2Cmd& command) noexcept;
 
     /**
-     * Запуск консоли из режима ожидания
+     * Запуск консоли пользователем
      * 
-     * @details Команда должна создавать поток (задачу) в которой будет работать библиотека консоли *linenoise*
+     * @details Команда должна создавать поток (задачу) в которой будет работать библиотека консоли *linenoise*. Вызывает метод `start()`
      */
-    virtual esp_err_t run(void) = 0;
+    esp_err_t run(void);
 
 
 protected:
@@ -77,13 +70,8 @@ protected:
     // Вызывается из initialize()
     virtual esp_err_t init_periph(void) = 0;
 
-    /**
-     * Деинициализация периферии консоли
-     * 
-     * @details Метод должен освобожлать все ресурсы, работать противоположно методу `run`. По результату консоль должна вернуть в режим повторного запуска.
-     */
-    virtual esp_err_t deinit_periph(void) = 0;
-    // virtual boolean init_commands(void) {
+    // Вызывается из run()
+    virtual esp_err_t start(void) = 0;
 
     char* setup_prompt(const char* prompt_str = NULL);
 

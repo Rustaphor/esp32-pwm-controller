@@ -42,7 +42,28 @@ esp_err_t AConsole2::registerCommand(AConsole2Cmd &command)
     return esp_console_cmd_register(&command._console_cmd);
 }
 
+esp_err_t AConsole2::run(void)
+{
+    esp_err_t result = ESP_OK;
 
+    if (conStatus != CONSOLE_STATUS_NOT_INITIALIZED) {
+        result = ESP_ERR_NOT_ALLOWED;
+        goto _exit;
+    }
+
+    result = start();
+
+    if (result == ESP_OK) {
+        conStatus = CONSOLE_STATUS_RUNNING;
+        ESP_LOGD(logConsole2Tag, "Console component started");
+    }
+
+_exit:
+    if (result) {
+        ESP_LOGE(logConsole2Tag, "Error: %d. Failed to start console!", result);
+    }
+    return result;
+}
 
 esp_err_t AConsole2::_init_console_library(void)
 {

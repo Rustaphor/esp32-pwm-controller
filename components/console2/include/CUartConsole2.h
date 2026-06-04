@@ -6,10 +6,9 @@
 #include <unistd.h>
 #include <inttypes.h>
 #include "sdkconfig.h"
+#include "driver/uart.h"
 #include "esp_log.h"
 #include "esp_system.h"
-#include "driver/uart.h"
-#include "freertos/queue.h"
 
 
 /*
@@ -31,8 +30,6 @@
 
 class CUartConsole2 : public AConsole2{
 
-    QueueHandle_t _hUartQueue;
-    uart_event_t event;
     unsigned char ch[1];
 
 public:
@@ -43,25 +40,30 @@ public:
     // Dispatch infinitive Loop from any Task (no blocking)
     inline void dispatch_loop(void){
 
-        // Wait until UART_DATA event is triggered
-        if (xQueueReceive(_hUartQueue, (void*) &event, 0)) {
+        int	value = getchar();
 
-            // Данные в буфере
-            if (event.type == UART_DATA) {
-                uart_read_bytes(CONSOLE2_UART_NUM, ch, sizeof(ch), portMAX_DELAY);
-                _onReceiveBytesEventHandler(ch, sizeof(ch));
+        ESP_LOGD(logConsole2Tag, "Receive value: %d", value);
 
-                // There used to be a UART_PATTERN_DET event, but the pattern position queue is full so that it can not
-                // record the position. We should set a larger queue size.
-                // Directly flush the rx buffer here.
-                uart_flush_input(CONSOLE2_UART_NUM);
-            }
+        // // Wait until UART_DATA event is triggered
+        // if (xQueueReceive(_hUartQueue, (void*) &event, 0)) {
 
-        }
+        //     // Данные в буфере
+        //     if (event.type == UART_DATA) {
+        //         uart_read_bytes(CONSOLE2_UART_NUM, ch, sizeof(ch), portMAX_DELAY);
+        //         _onReceiveBytesEventHandler(ch, sizeof(ch));
+
+        //         // There used to be a UART_PATTERN_DET event, but the pattern position queue is full so that it can not
+        //         // record the position. We should set a larger queue size.
+        //         // Directly flush the rx buffer here.
+        //         uart_flush_input(CONSOLE2_UART_NUM);
+        //     }
+
+        // }
     }
 
 protected:
 
+    esp_err_t start(void) override;
     esp_err_t init_periph(void) override;
 // esp_err_t deinit_periph(void) override;
     esp_err_t init_console_periph(void);
