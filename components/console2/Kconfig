@@ -11,6 +11,6 @@ menu "Console2 Component"
         int "Stack size for Console FreeRTOS task"
         default 4096
         help
-            Stack size in byrtes. Set size more than 2048 bytes.
+            Stack size in bytes. Set size more than 2048 bytes.
 
 endmenu
