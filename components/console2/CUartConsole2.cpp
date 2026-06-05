@@ -20,7 +20,7 @@ esp_err_t CUartConsole2::start(void)
     esp_err_t result = ESP_OK;
 
 #if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || defined(CONFIG_ESP_CONSOLE_UART_CUSTOM)
-    _disable_isr();
+    // _disable_isr();
 #endif
     
     // TODO: Реализовать запуск консоли
@@ -28,18 +28,6 @@ esp_err_t CUartConsole2::start(void)
     return result;
 }
 
-esp_err_t CUartConsole2::do_stop(void)
-{
-    esp_err_t result = ESP_OK;
-
-#if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || defined(CONFIG_ESP_CONSOLE_UART_CUSTOM)
-    result = _init_n_enable_isr();
-#endif
-    
-    // TODO: Реализовать запуск консоли
-
-    return result;
-}
 
 esp_err_t CUartConsole2::init_periph(void)
 {
@@ -125,17 +113,6 @@ esp_err_t CUartConsole2::init_periph(void)
     setvbuf(stdin, NULL, _IONBF, 0);
 
     return ESP_OK;
-}
-
-esp_err_t CUartConsole2::init_console_periph(void)
-{
-    esp_err_t result = ESP_OK;
-
-
-    if (result != ESP_OK) {
-        ESP_LOGE(logConsole2Tag, "Error %d failed to initialize console", result);
-    }
-    return result;
 }
 
 inline esp_err_t CUartConsole2::_init_n_enable_isr(void)

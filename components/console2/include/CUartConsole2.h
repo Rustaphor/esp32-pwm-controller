@@ -48,11 +48,11 @@ public:
             if (event.type == UART_DATA && conStatus == CONSOLE_STATUS_INITIALIZED) {
                 uart_read_bytes(CONSOLE2_UART_NUM, ch, sizeof(ch), portMAX_DELAY);
 
-                ESP_LOGI(logConsole2Tag, "UART_DATA: %c", ch[0]);
-
                 // Команда запуска консоли
                 if (ch[0] == ENTER) {
                     run();
+                } else if (ch[0] == CTRL_C || ch[0] == CTRL_X) {
+                    // TODO: Реализовать выход из консоли
                 }
 
                 // There used to be a UART_PATTERN_DET event, but the pattern position queue is full so that it can not
@@ -67,9 +67,7 @@ public:
 protected:
 
     esp_err_t start(void) override;
-    esp_err_t do_stop(void) override;
     esp_err_t init_periph(void) override;
-    esp_err_t init_console_periph(void);
 
 private:
 

@@ -5,6 +5,7 @@
 #include "sdkconfig.h"
 #include "esp_err.h"
 #include "AConsole2Cmd.h"
+#include <freertos/task.h>
 
 #define CONSOLE2_PROMPT_MAX_LENGTH 16
 
@@ -54,7 +55,7 @@ public:
     esp_err_t run(void) noexcept;
 
 
-    // esp_err_t stop(void) noexcept;
+    esp_err_t stop(void) noexcept;
 
 
 protected:
@@ -65,21 +66,24 @@ protected:
     // Вызывается из run()
     virtual esp_err_t start(void) = 0;
 
-    // Вызывается из stop()
-    virtual esp_err_t do_stop(void) = 0;
-
-    static const char* getGreetingsMsg(void) {
+    static const char* getHelp2EnterConsoleMsg(void) {
         static const char* greetings = "Press <ENTER> to enter command line interface.\n\r";
         return greetings;
     }
 
-    char* setup_prompt(const char* prompt_str = NULL);
+    /**
+     * Return prompt string if it is set, otherwise return default prompt string
+     */
+    const char* setup_prompt(const char* prompt_str = NULL);
 
     console2_status conStatus = CONSOLE_STATUS_NOT_INITIALIZED;
-    static char prompt[CONSOLE2_PROMPT_MAX_LENGTH];
 
 private:
 
+    TaskHandle_t _xTaskHandle;
+    [[noreturn]]
+    static void _vConsole2Task(void* pvParameters);
+    char _prompt[CONSOLE2_PROMPT_MAX_LENGTH];
     esp_err_t _init_console_library(void);
 };
 
