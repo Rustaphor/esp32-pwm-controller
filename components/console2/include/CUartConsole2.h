@@ -1,14 +1,8 @@
 #pragma once
 
-
 #include "AConsole2.h"
-#include <stdio.h>
-#include <unistd.h>
-#include <inttypes.h>
 #include "sdkconfig.h"
 #include "driver/uart.h"
-#include "esp_log.h"
-#include "esp_system.h"
 #include "freertos/queue.h"
 
 
@@ -25,6 +19,7 @@
 
 #define CONSOLE2_UART_NUM UART_NUM_0
 #define CONSOLE2_UART_BUFF_SIZE 256
+#define CONSOLE2_UART_PATTERT ENTER
 
 // CONFIG_ESP_CONSOLE_UART_NUM
 
@@ -32,35 +27,36 @@
 class CUartConsole2 : public AConsole2{
 
     QueueHandle_t _hUartQueue;
-    uart_event_t event;
-    unsigned char ch[1];
+    uart_event_t _event;
+    unsigned char _ch[1];
+    size_t _buffered_size;
 
 public:
     CUartConsole2() {};
 
-    // Dispatch infinitive Loop from any Task (no blocking)
-    inline void dispatch_loop(void){
+    /**
+     * Dispatch infinitive Loop from any Task (no blocking)
+     * 
+     * @details Функцию необходлимо постоянно опрашивать в бесконечном цикле какой-либо задачи (FreeRTOS Task). \
+     * Наиболее цдобно опрашивтаь в Idle Task.
+     */
+    inline void dispatch(void){
 
-        // Wait until UART_DATA event is triggered
-        if (xQueueReceive(_hUartQueue, (void*) &event, 0)) {
+        // Check UART_DATA event data (start console) without blocking
+        if (xQueueReceive(_hUartQueue, (void*) &_event, 0)) {
+            if (conStatus != CONSOLE_STATUS_INITIALIZED) return;
 
             // Данные в буфере
-            if (event.type == UART_DATA && conStatus == CONSOLE_STATUS_INITIALIZED) {
-                uart_read_bytes(CONSOLE2_UART_NUM, ch, sizeof(ch), portMAX_DELAY);
+            if (_event.type == UART_DATA) {
+                _ch[0] = 0;
+                uart_read_bytes(CONSOLE2_UART_NUM, _ch, sizeof(_ch), portMAX_DELAY);
 
-                // Команда запуска консоли
-                if (ch[0] == ENTER) {
-                    run();
-                } else if (ch[0] == CTRL_C || ch[0] == CTRL_X) {
-                    // TODO: Реализовать выход из консоли
-                }
+                // Проверка клавиши 'Enter'
+                if (_ch[0] == ENTER) run();
 
-                // There used to be a UART_PATTERN_DET event, but the pattern position queue is full so that it can not
-                // record the position. We should set a larger queue size.
-                // Directly flush the rx buffer here.
                 uart_flush_input(CONSOLE2_UART_NUM);
+                // xQueueReset(_hUartQueue);
             }
-
         }
     }
 
@@ -71,6 +67,6 @@ protected:
 
 private:
 
-    inline esp_err_t _init_n_enable_isr(void);
+    inline esp_err_t _init_n_enable_isr(void); 
     inline esp_err_t _disable_isr(void) { return uart_disable_rx_intr(CONSOLE2_UART_NUM); }
 };

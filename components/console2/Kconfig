@@ -7,6 +7,13 @@ menu "Console2 Component"
             Linenoise line editing library provides functions to save and load
             command history. If this option is enabled, each command will be save to memmory.
 
+    config CONSOLE2_PRESSENTER_MSG
+        bool "Print how to enter message"
+        default y
+        help
+            After initialize and 'exit' CLI command will print
+            message how to enter to console
+
     config CONSOLE2_MAX_COMMAND_LINE_LENGTH
         int "Maximum command line length"
         default 256

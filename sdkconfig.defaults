@@ -16,6 +16,12 @@ CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 CONFIG_LWIP_IP_FORWARD=y
 CONFIG_LWIP_IPV4_NAPT=y
 
+# 
+# Kernel Configuration
+#
+# Idle call back function for Console2
+CONFIG_FREERTOS_USE_IDLE_HOOK=y
+
 # Minimal flash size
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 

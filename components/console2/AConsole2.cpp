@@ -10,6 +10,21 @@
 #include "console2_defs.h"
 
 
+#define CONSOLE2_SIG_TEMRINATE 0xDEAD
+
+// System exit console command
+esp_console_cmd_t cmd_exit = {
+    .command = "exit",
+    .help = "Exit from console",
+    .hint = NULL,
+    .func = nullptr,
+    .argtable = nullptr,
+    .func_w_context = [](void *context, int argc, char **argv) {
+        return CONSOLE2_SIG_TEMRINATE;
+    }
+};
+
+
 esp_err_t AConsole2::initialize(void)
 {
     esp_err_t result = ESP_OK;
@@ -33,8 +48,12 @@ esp_err_t AConsole2::initialize(void)
      */
     setup_prompt(CONSOLE2_PROMPT_PREFIX ">");
 
+    cmd_exit.context = this;
+
     // Строка приветствия в консоли
+#ifdef CONFIG_CONSOLE2_PRESSENTER_MSG
     printf(getHelp2EnterConsoleMsg());
+#endif
 
 end_init:
     return result;
@@ -68,6 +87,7 @@ esp_err_t AConsole2::run(void)
     /* Register system commands */
     esp_console_register_help_command();
     register_system_common();
+    esp_console_cmd_register(&cmd_exit);
 
     result = start();
     if (result) {
@@ -80,7 +100,6 @@ esp_err_t AConsole2::run(void)
     }
 
     conStatus = CONSOLE_STATUS_RUNNED;
-    ESP_LOGD(logConsole2Tag, "Console component started");
     return ESP_OK;   
     
 _deinit:
@@ -95,11 +114,12 @@ esp_err_t AConsole2::stop(void) noexcept
     esp_err_t result;
     result = esp_console_deinit();
 
-    conStatus = CONSOLE_STATUS_INITIALIZED;
-
     if (result != ESP_OK) {
-        ESP_LOGE(logConsole2Tag, "Error: %d. Failed to stop console!", result);
+        ESP_LOGE(logConsole2Tag, "Error: %d. Failed to deinitialize console!", result);
     }
+
+    conStatus = CONSOLE_STATUS_INITIALIZED;
+    
     return result;
 }
 
@@ -108,11 +128,11 @@ void AConsole2::_vConsole2Task(void *pvParameters)
     AConsole2 *pConsole = (AConsole2*) pvParameters;
 
     printf("\n"
-            CONFIG_CONSOLE2_GREETINGS_MESSAGE "\n"
-"Type 'help' to get the list of commands.\n \
+            CONFIG_CONSOLE2_GREETINGS_MESSAGE "\n \
+Type 'help' to get the list of commands.\n \
 Use <UP>/<DOWN> arrows to navigate through command history.\n \
 Press <TAB> when typing command name to auto-complete. \n \
-<Ctrl+c> or type 'exit' will terminate the console environment.\n");
+Type 'exit' to terminate the console environment.\n");
 
     if (linenoiseIsDumbMode()) {
         printf("\n \
@@ -132,8 +152,6 @@ On Windows, try using Windows Terminal or Putty instead.\n");
             continue;
         }
 
-        ESP_LOGD(logConsole2Tag, "First byte: %d", line[0]);
-
         /* Add the command to the history if not empty*/
         if (strlen(line) > 0) {
             linenoiseHistoryAdd(line);
@@ -150,7 +168,10 @@ On Windows, try using Windows Terminal or Putty instead.\n");
             printf("Unrecognized command\n");
         } else if (err == ESP_ERR_INVALID_ARG) {
             // command was empty
-        } else if (err == ESP_OK && ret != ESP_OK) {
+        } else if (ret == CONSOLE2_SIG_TEMRINATE) {
+            linenoiseFree(line);
+            break;
+        } else if (err == ESP_OK && ret) {
             printf("Command returned non-zero error code: 0x%x\n", ret);
         } else if (err != ESP_OK) {
             printf("Internal error: %d\n", err);
@@ -160,9 +181,13 @@ On Windows, try using Windows Terminal or Putty instead.\n");
     }
 
     printf("Console terminated.\n");
-
     pConsole->stop();
-    vTaskDelete(pConsole->_xTaskHandle);
+
+#ifdef CONFIG_CONSOLE2_PRESSENTER_MSG
+   printf(getHelp2EnterConsoleMsg());
+#endif
+
+    vTaskDelete(NULL);
 }
 
 esp_err_t AConsole2::_init_console_library(void)

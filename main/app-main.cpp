@@ -15,6 +15,7 @@
 // #include "esp_pthread.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include "esp_freertos_hooks.h"
 
 #include "esp_log.h"
 #include "CMotorDrive.h"
@@ -45,6 +46,20 @@ CMotorDrive motor;
     // ESP_LOGI(TAG, "pwmval = %d", pwmval);
     // motor.test_pwm(pwmval);
  }
+
+
+CUartConsole2 console2;
+
+
+
+// #ifdef CONFIG_FREERTOS_USE_IDLE_HOOK
+bool vApplicationIdleHook2(void) {
+
+    // Опрос прерывания UART для включения консоли
+    console2.dispatch();
+    return false;
+}
+// #endif
 
 
 
@@ -105,7 +120,7 @@ CMotorDrive motor;
 //     cfg.prio = prio;
 //     return cfg;
 // }
-CUartConsole2 myConsole;
+
 
 extern "C" [[noreturn]] void app_main(void)
 {
@@ -117,7 +132,7 @@ extern "C" [[noreturn]] void app_main(void)
     this_thread::sleep_for(milliseconds{200});
     motor.run();
 
-    myConsole.initialize();
+    console2.initialize();
   
     // wifi_initialize(WIFI_MODE_APSTA);
     
@@ -143,13 +158,15 @@ extern "C" [[noreturn]] void app_main(void)
         ESP_LOGE(TAG,"Error starting timer.");
     }
 
+    auto ret = esp_register_freertos_idle_hook(vApplicationIdleHook2);
 
      // Let the main task do something too
     while (true) {
         // xSemaphoreTake(motor.hxSem, portMAX_DELAY);
 
-        myConsole.dispatch_loop();
-
+        this_thread::sleep_for(sleep_time);
 
     }
 }
+
+

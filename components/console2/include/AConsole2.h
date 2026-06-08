@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <list>
 #include "sdkconfig.h"
 #include "esp_err.h"
 #include "AConsole2Cmd.h"
@@ -26,7 +25,6 @@ using namespace std;
 
 class AConsole2 {
 
-    static list<AConsole2Cmd&> _commands;   // Подобрать список уникальных значений
     
 public:
 
@@ -81,7 +79,6 @@ protected:
 private:
 
     TaskHandle_t _xTaskHandle;
-    [[noreturn]]
     static void _vConsole2Task(void* pvParameters);
     char _prompt[CONSOLE2_PROMPT_MAX_LENGTH];
     esp_err_t _init_console_library(void);

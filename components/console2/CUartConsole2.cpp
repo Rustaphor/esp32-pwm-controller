@@ -63,13 +63,13 @@ esp_err_t CUartConsole2::init_periph(void)
     };
 
     /* Install UART driver for interrupt-driven reads and writes */
-    ESP_ERROR_CHECK( uart_driver_install((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, CONSOLE2_UART_BUFF_SIZE, 0, 2, &_hUartQueue, 0) );
-    ESP_ERROR_CHECK( uart_param_config((uart_port_t) CONFIG_ESP_CONSOLE_UART_NUM, &uart_config) );
+    ESP_ERROR_CHECK( uart_driver_install(CONSOLE2_UART_NUM, CONSOLE2_UART_BUFF_SIZE, 0, 2, &_hUartQueue, 0) );
+    ESP_ERROR_CHECK( uart_param_config(CONSOLE2_UART_NUM, &uart_config) );
 
     /* Tell VFS to use UART driver */
     uart_vfs_dev_use_driver(CONFIG_ESP_CONSOLE_UART_NUM);
 
-    /* Enable interrupt to receive bytes */
+    /* Enable interrupt to check _start_ command */
     if (_init_n_enable_isr()) {
         ESP_LOGE(logConsole2Tag, "Error initializing UART interrupt");
     }
@@ -128,51 +128,7 @@ inline esp_err_t CUartConsole2::_init_n_enable_isr(void)
     if (!result) {
         result = uart_enable_rx_intr(CONSOLE2_UART_NUM);
     }
+
     return result;
 }
-
-
-// esp_err_t CUartConsole2::init() {
-//     if (_conStatus == CONSOLE_STATUS_INITIALIZED) {
-//         ESP_LOGW(logConsole2Tag, "Console already initialized");
-//         return ESP_ERR_NOT_ALLOWED;
-//     }
-
-//     // Initialize console peripherals
-//     _init_console_periphs();
-//     _init_console_library();
-    
-//     // Initialize console commands
-//     esp_console_register_help_command();
-//     register_system_common();
-    
-//     mInitialized = true;
-//     ESP_LOGI(logConsole2Tag, "Console initialized");
-// }
-
-// bool CUartConsole2::registerCommand(const string& command, const string& help, 
-//                                 const string& hint, int (*func)(int, char**)) {
-//     if (!mInitialized) {
-//         ESP_LOGE(logConsole2Tag, "Console not initialized");
-//         return false;
-//     }
-    
-//     esp_console_cmd_t cmd = {
-//         .command = command.c_str(),
-//         .help = help.c_str(),
-//         .hint = hint.c_str(),
-//         .func = func
-//     };
-    
-//     esp_err_t err = esp_console_cmd_register(&cmd);
-//     if (err != ESP_OK) {
-//         ESP_LOGE(logConsole2Tag, "Failed to register command '%s': %s", 
-//                 command.c_str(), esp_err_to_name(err));
-//         return false;
-//     }
-    
-//     ESP_LOGI(logConsole2Tag, "Command '%s' registered successfully", command.c_str());
-//     return true;
-// }
-
 
