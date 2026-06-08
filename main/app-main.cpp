@@ -52,14 +52,14 @@ CUartConsole2 console2;
 
 
 
-// #ifdef CONFIG_FREERTOS_USE_IDLE_HOOK
-bool vApplicationIdleHook2(void) {
+#ifdef CONFIG_FREERTOS_USE_IDLE_HOOK
+extern "C"
+void vApplicationIdleHook(void) {
 
     // Опрос прерывания UART для включения консоли
     console2.dispatch();
-    return false;
 }
-// #endif
+#endif
 
 
 
@@ -157,8 +157,6 @@ extern "C" [[noreturn]] void app_main(void)
     if( xTimerStart(xTimers[0], 0 ) != pdPASS ) {
         ESP_LOGE(TAG,"Error starting timer.");
     }
-
-    auto ret = esp_register_freertos_idle_hook(vApplicationIdleHook2);
 
      // Let the main task do something too
     while (true) {
