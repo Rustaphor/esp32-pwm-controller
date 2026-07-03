@@ -26,7 +26,7 @@
 
 class CUartConsole2 : public AConsole2{
 
-    QueueHandle_t _hUartQueue;
+    QueueHandle_t _hUartQueue = NULL;
     uart_event_t _event;
     unsigned char _ch[1];
     size_t _buffered_size;
@@ -38,12 +38,12 @@ public:
      * Dispatch infinitive Loop from any Task (no blocking)
      * 
      * @details Функцию необходлимо постоянно опрашивать в бесконечном цикле какой-либо задачи (FreeRTOS Task). \
-     * Наиболее цдобно опрашивтаь в Idle Task.
+     * Наиболее удобно низкоприоритетных задачах бездействия (Idle).
      */
     inline void dispatch(void){
 
         // Check UART_DATA event data (start console) without blocking
-        if (xQueueReceive(_hUartQueue, (void*) &_event, 0)) {
+        if (_hUartQueue && xQueueReceive(_hUartQueue, (void*) &_event, 0) == pdTRUE) {
             if (conStatus != CONSOLE_STATUS_INITIALIZED) return;
 
             // Данные в буфере
@@ -52,7 +52,9 @@ public:
                 uart_read_bytes(CONSOLE2_UART_NUM, _ch, sizeof(_ch), portMAX_DELAY);
 
                 // Проверка клавиши 'Enter'
-                if (_ch[0] == ENTER) run();
+                if (_ch[0] == ENTER) {
+                    run();
+                }
 
                 uart_flush_input(CONSOLE2_UART_NUM);
                 // xQueueReset(_hUartQueue);

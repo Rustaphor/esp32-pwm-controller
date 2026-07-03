@@ -72,38 +72,21 @@ esp_err_t AConsole2::run(void)
 
     if (conStatus == CONSOLE_STATUS_NOT_INITIALIZED) {
         result = ESP_ERR_NOT_ALLOWED;
+        ESP_LOGW(logConsole2Tag, "Run failed. Console2 must be initilized before!");
         goto _err_exit;
     } else if (conStatus == CONSOLE_STATUS_RUNNED) {
         goto _err_exit;
     }
 
-    result = _init_console_library();
-    if (result) {
-        // TODO: add deinit-periph here
-        ESP_LOGE(logConsole2Tag, "Failed to initialize console library!");
-        goto _err_exit;
-    }
-
-    /* Register system commands */
-    esp_console_register_help_command();
-    register_system_common();
-    esp_console_cmd_register(&cmd_exit);
-
-    result = start();
-    if (result) {
-        goto _deinit;
-    }
-
     if (xTaskCreate(_vConsole2Task, "console", CONFIG_CONSOLE2_TASK_HEAP_STACK_SIZE, this, tskIDLE_PRIORITY, &_xTaskHandle) != pdTRUE) {
+        ESP_LOGE(logConsole2Tag, "Error: %d. Failed to run console task", result);
         result = ESP_FAIL;
-        goto _deinit;
+        goto _err_exit;
     }
 
     conStatus = CONSOLE_STATUS_RUNNED;
     return ESP_OK;   
     
-_deinit:
-    esp_console_deinit();
 _err_exit:
     ESP_LOGE(logConsole2Tag, "Error: %d. Failed to start console!", result);
     return result;
@@ -111,12 +94,13 @@ _err_exit:
 
 esp_err_t AConsole2::stop(void) noexcept
 {
-    esp_err_t result;
-    result = esp_console_deinit();
+    esp_err_t result = ESP_OK;
+    // TODO: проверить статус CONSOLE_STATUS_RUNNED, затем послать сигнал потоку консоли (через NOTIFY или Queue) для корректного завершения попробовать кинуть символ ENTER
+    // в Stdin fputs("\n", stdin);
 
-    if (result != ESP_OK) {
-        ESP_LOGE(logConsole2Tag, "Error: %d. Failed to deinitialize console!", result);
-    }
+    // if (result != ESP_OK) {
+    //     ESP_LOGE(logConsole2Tag, "Error: %d. Failed to deinitialize console!", result);
+    // }
 
     conStatus = CONSOLE_STATUS_INITIALIZED;
     
@@ -125,7 +109,28 @@ esp_err_t AConsole2::stop(void) noexcept
 
 void AConsole2::_vConsole2Task(void *pvParameters)
 {
+    esp_err_t err = ESP_OK;
+    char* line; int ret;
     AConsole2 *pConsole = (AConsole2*) pvParameters;
+
+
+    /* Console Task Initializer */
+    err = pConsole->_init_console_library();
+    if (err) {
+        ESP_LOGE(logConsole2Tag, "Failed to initialize console library!");
+        goto err_task_exit;
+    }
+
+    /* Register system commands */
+    if (esp_console_register_help_command() != ESP_OK) {
+        goto err_task_exit;
+    }
+
+    if (esp_console_cmd_register(&cmd_exit) != ESP_OK) {
+        goto err_task_exit;
+    }
+
+    register_system_common();
 
     printf("\n"
             CONFIG_CONSOLE2_GREETINGS_MESSAGE "\n \
@@ -146,7 +151,7 @@ On Windows, try using Windows Terminal or Putty instead.\n");
         /* Get a line using linenoise.
          * The line is returned when ENTER is pressed.
          */
-        char* line = linenoise(pConsole->_prompt);
+        line = linenoise(pConsole->_prompt);
 
         if (line == NULL) { /* Ignore empty lines */
             continue;
@@ -162,8 +167,7 @@ On Windows, try using Windows Terminal or Putty instead.\n");
         }
 
         /* Try to run the command */
-        int ret;
-        esp_err_t err = esp_console_run(line, &ret);
+        err = esp_console_run(line, &ret);
         if (err == ESP_ERR_NOT_FOUND) {
             printf("Unrecognized command\n");
         } else if (err == ESP_ERR_INVALID_ARG) {
@@ -187,6 +191,8 @@ On Windows, try using Windows Terminal or Putty instead.\n");
    printf(getHelp2EnterConsoleMsg());
 #endif
 
+err_task_exit:
+    esp_console_deinit();
     vTaskDelete(NULL);
 }
 

@@ -22,6 +22,7 @@
 
 #include "CUartConsole2.h"
 
+#include <freertos/semphr.h>
 
 
 
@@ -51,13 +52,12 @@ CMotorDrive motor;
 CUartConsole2 console2;
 
 
-
+// Функция обратного вызова Idle Task FreeRTOS
 #ifdef CONFIG_FREERTOS_USE_IDLE_HOOK
 extern "C"
 void vApplicationIdleHook(void) {
 
-    // Опрос прерывания UART для включения консоли
-    console2.dispatch();
+     console2.dispatch();
 }
 #endif
 
@@ -158,9 +158,11 @@ extern "C" [[noreturn]] void app_main(void)
         ESP_LOGE(TAG,"Error starting timer.");
     }
 
+
      // Let the main task do something too
     while (true) {
         // xSemaphoreTake(motor.hxSem, portMAX_DELAY);
+
 
         this_thread::sleep_for(sleep_time);
 
