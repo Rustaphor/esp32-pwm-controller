@@ -74,4 +74,11 @@ private:
     esp_err_t _init_console_library(void);
     inline esp_err_t _init_n_enable_isr(void); 
     inline esp_err_t _disable_isr(void) { return uart_disable_rx_intr(CONSOLE2_UART_NUM); }
+    inline void _register_custom_cmds() {
+        auto it_cmd { AConsole2::getCommandList().cbegin() };
+        while (it_cmd != AConsole2::getCommandList().cend()){
+            esp_console_cmd_register((*it_cmd)->getCommand());
+            ++it_cmd;
+        }
+    };
 };

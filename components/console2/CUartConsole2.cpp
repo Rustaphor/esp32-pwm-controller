@@ -33,14 +33,13 @@ void CUartConsole2::_vConsole2Task(void *pvParameters)
     esp_err_t err = ESP_OK;
     char* line; int ret;
     CUartConsole2 *pConsole = (CUartConsole2*) pvParameters;
-    auto it_cmd { cmdList.cbegin() };
 
     /* Console Task Initializer */
     err = pConsole->_init_console_library();
     if (err) {
         ESP_LOGE(logConsole2Tag, "Failed to initialize console library!");
         goto err_task_exit;
-    }
+    } 
 
     /* Register system commands */
     if (esp_console_register_help_command() != ESP_OK) {
@@ -54,14 +53,8 @@ void CUartConsole2::_vConsole2Task(void *pvParameters)
     extern void register_system_common(void);
     register_system_common();
 
-
-
-    while (it_cmd != cmdList.cend()) {
-        auto b = it_cmd->getCommand();
-        ++it_cmd;
-    }
     // Блок регистрации команд пользователя
-    // esp_console_cmd_register(&command._console_cmd);
+    pConsole->_register_custom_cmds();
 
     // Print Greeting message
     printf(getMsgStandartGreeting());

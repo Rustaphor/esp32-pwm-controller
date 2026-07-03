@@ -25,9 +25,10 @@ using namespace std;
 
 
 class AConsole2 {
-
+    
 
 public:
+
 
     /**
      * Получить текущее состояние консоли
@@ -44,7 +45,7 @@ public:
     /**
      * Регистрация команды в консоли
      */
-    static void registerCommand(const AConsole2Cmd& command) noexcept;
+    static void registerCommand(AConsole2Cmd& command) noexcept;
 
     /**
      * Запуск консоли пользователем
@@ -67,12 +68,10 @@ protected:
     SemaphoreHandle_t hSem = NULL;
     console2_status conStatus = CONSOLE_STATUS_NOT_INITIALIZED;
     char prompt[CONSOLE2_PROMPT_MAX_LENGTH];
-    static vector<const AConsole2Cmd*> cmdList;
 
     AConsole2() {
         vSemaphoreCreateBinary(hSem);
     }
-
 
     // Вызывается из initialize()
     virtual esp_err_t init_periph(void) = 0;
@@ -86,6 +85,7 @@ protected:
     // Стандартные статические сообщения (подсказки)
     static const char* getMsgHelp2EnterConsole(void);
     static const char* getMsgStandartGreeting(void);
+    static const vector<const AConsole2Cmd*>& getCommandList(void) noexcept;
 
     /**
      * Return prompt string if it is set, otherwise return default prompt string

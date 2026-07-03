@@ -11,6 +11,8 @@
 
 #define CONSOLE2_SIG_TEMRINATE 0xDEAD
 
+static vector<const AConsole2Cmd*> cmdList;
+
 
 esp_err_t AConsole2::initialize(void)
 {
@@ -51,7 +53,7 @@ end_init:
     return result;
 }
 
-void AConsole2::registerCommand(const AConsole2Cmd &command)
+void AConsole2::registerCommand(AConsole2Cmd &command)
 {
     // Проверка на поворное добавление одной и той же команды
     auto it { cmdList.begin() };
@@ -59,8 +61,14 @@ void AConsole2::registerCommand(const AConsole2Cmd &command)
         if (*it == &command) return;
         ++it;
     }
+
     cmdList.push_back(&command);
     ESP_LOGI(logConsole2Tag, "Registering console command: %s", command._console_cmd.command);
+}
+
+const vector<const AConsole2Cmd *> &AConsole2::getCommandList(void) noexcept
+{
+    return cmdList;
 }
 
 esp_err_t AConsole2::run(void)
