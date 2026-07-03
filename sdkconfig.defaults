@@ -16,14 +16,22 @@ CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 CONFIG_LWIP_IP_FORWARD=y
 CONFIG_LWIP_IPV4_NAPT=y
 
+# 
+# Kernel Configuration
+#
+# Idle call back function for Console2
+CONFIG_FREERTOS_USE_IDLE_HOOK=y
+
 # Minimal flash size
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 
 # Disable Watchdog (for Debug only)
 CONFIG_ESP_TASK_WDT_EN=n
 
-# GDB Stub (debugging via standart UART only. Read wiki for details)
-# NOTE: 1. Conflicts with 'CLI Console' component. Switch off 'CLI Console' component to use it. Add debug information with compiling.
-#       2. Must be disabled in Release ver.
-CONFIG_ESP_SYSTEM_GDBSTUB_RUNTIME=n
-CONFIG_ESP_GDBSTUB_SUPPORT_TASKS=y
+#
+# ESP-Driver:MCPWM Configurations
+#
+CONFIG_MCPWM_ISR_HANDLER_IN_IRAM=y
+CONFIG_MCPWM_ISR_CACHE_SAFE=y
+CONFIG_MCPWM_CTRL_FUNC_IN_IRAM=y
+

@@ -15,10 +15,14 @@
 // #include "esp_pthread.h"
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include "consolexec.h"
+#include "esp_freertos_hooks.h"
 
 #include "esp_log.h"
+#include "CMotorDrive.h"
 
+#include "CUartConsole2.h"
+
+#include <freertos/semphr.h>
 
 
 
@@ -32,16 +36,31 @@ using namespace std::chrono;
  #define NUM_TIMERS 1
  TimerHandle_t xTimers[NUM_TIMERS];
  
- const auto sleep_time = seconds {
-    10
-};
+ const auto sleep_time = seconds{10};
+
+CMotorDrive motor;
 
  void vMyTimer_callback(TimerHandle_t xTimer)
  {
-    // ESP_LOGD(TAG, "Numer of iteration %d", 4);
+    // static acmot_sineval_t pwmval = 0;
+    // pwmval++;
+    // ESP_LOGI(TAG, "pwmval = %d", pwmval);
+    // motor.test_pwm(pwmval);
  }
 
- CPwmControl PwmCtrl1(PWM_OUTPUT_IO_DEFAULT);
+
+CUartConsole2 console2;
+
+
+// Функция обратного вызова Idle Task FreeRTOS
+#ifdef CONFIG_FREERTOS_USE_IDLE_HOOK
+extern "C"
+void vApplicationIdleHook(void) {
+
+     console2.dispatch();
+}
+#endif
+
 
 
 // void print_thread_info(const char *extra = nullptr)
@@ -106,9 +125,15 @@ using namespace std::chrono;
 extern "C" [[noreturn]] void app_main(void)
 {
 
-    // Инициализация ШИМ-контроллера
-    PwmCtrl1.initialize();
+    /*
+    * Блок первичных инициализаций
+    */
+    motor.initialize();
+    this_thread::sleep_for(milliseconds{200});
+    motor.run();
 
+    console2.initialize();
+  
     // wifi_initialize(WIFI_MODE_APSTA);
     
     // // Create a thread using default values that can run on any core
@@ -128,16 +153,19 @@ extern "C" [[noreturn]] void app_main(void)
     // std::thread thread_2(thread_func);
 
     // Start Software Timer
-    xTimers[0] = xTimerCreate("myTimer", 200, pdTRUE, (void*) 0, vMyTimer_callback);
+    xTimers[0] = xTimerCreate("myTimer", 100, pdTRUE, (void*) 0, vMyTimer_callback);
     if( xTimerStart(xTimers[0], 0 ) != pdPASS ) {
         ESP_LOGE(TAG,"Error starting timer.");
     }
 
-    // CLI initialization
-    CConsoleExecutor::init();
 
      // Let the main task do something too
     while (true) {
-         this_thread::sleep_for(sleep_time);
+        // xSemaphoreTake(motor.hxSem, portMAX_DELAY);
+
+
+        this_thread::sleep_for(sleep_time);
     }
 }
+
+
