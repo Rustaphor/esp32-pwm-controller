@@ -70,7 +70,7 @@ class CConsoleExecutor {
 
             /* Prompt to be printed before each line.
             * This can be customized, made dynamic, etc. */
-            repl_config.prompt = CONSOLE2_PROMPT_PREFIX_STR ">";
+            repl_config._prompt = CONSOLE2_PROMPT_PREFIX_STR ">";
             repl_config.max_cmdline_length = CONFIG_CONSOLE_MAX_COMMAND_LINE_LENGTH;
 
             /* Register commands */

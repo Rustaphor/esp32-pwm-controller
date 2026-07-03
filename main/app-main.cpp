@@ -36,7 +36,7 @@ using namespace std::chrono;
  #define NUM_TIMERS 1
  TimerHandle_t xTimers[NUM_TIMERS];
  
- const auto sleep_time = seconds{2};
+ const auto sleep_time = seconds{10};
 
 CMotorDrive motor;
 
@@ -165,7 +165,6 @@ extern "C" [[noreturn]] void app_main(void)
 
 
         this_thread::sleep_for(sleep_time);
-
     }
 }
 

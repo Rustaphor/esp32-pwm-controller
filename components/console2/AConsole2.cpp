@@ -5,29 +5,22 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_console.h"
-#include "cmd_system.h"
 #include "linenoise/linenoise.h"
 #include "console2_defs.h"
 
 
 #define CONSOLE2_SIG_TEMRINATE 0xDEAD
 
-// System exit console command
-esp_console_cmd_t cmd_exit = {
-    .command = "exit",
-    .help = "Exit from console",
-    .hint = NULL,
-    .func = nullptr,
-    .argtable = nullptr,
-    .func_w_context = [](void *context, int argc, char **argv) {
-        return CONSOLE2_SIG_TEMRINATE;
-    }
-};
-
 
 esp_err_t AConsole2::initialize(void)
 {
     esp_err_t result = ESP_OK;
+    if (hSem == NULL) {
+        result = ESP_ERR_INVALID_STATE;
+        goto end_init;
+    }
+
+    xSemaphoreTake(hSem, portMAX_DELAY);
 
     if (conStatus != CONSOLE_STATUS_NOT_INITIALIZED) {
         result = ESP_ERR_NOT_ALLOWED;
@@ -40,221 +33,131 @@ esp_err_t AConsole2::initialize(void)
         goto end_init;
     }
 
-    conStatus = CONSOLE_STATUS_INITIALIZED;
-    ESP_LOGD(logConsole2Tag, "Console2 component initialized");
-
     /* Prompt to be printed before each line.
      * This can be customized, made dynamic, etc.
      */
     setup_prompt(CONSOLE2_PROMPT_PREFIX ">");
 
-    cmd_exit.context = this;
+    conStatus = CONSOLE_STATUS_INITIALIZED;
+    ESP_LOGD(logConsole2Tag, "Console2 component initialized");
 
     // Строка приветствия в консоли
 #ifdef CONFIG_CONSOLE2_PRESSENTER_MSG
-    printf(getHelp2EnterConsoleMsg());
+    printf(getMsgHelp2EnterConsole());
 #endif
 
 end_init:
+    xSemaphoreGive(hSem);
     return result;
 }
 
-esp_err_t AConsole2::registerCommand(AConsole2Cmd &command)
+void AConsole2::registerCommand(const AConsole2Cmd &command)
 {
-    // _commands.push_back(command);
+    // Проверка на поворное добавление одной и той же команды
+    auto it { cmdList.begin() };
+    while (it != cmdList.end()) {
+        if (*it == &command) return;
+        ++it;
+    }
+    cmdList.push_back(&command);
     ESP_LOGI(logConsole2Tag, "Registering console command: %s", command._console_cmd.command);
-    return esp_console_cmd_register(&command._console_cmd);
 }
 
 esp_err_t AConsole2::run(void)
 {
     esp_err_t result = ESP_OK;
+    if (hSem == NULL) {
+        result = ESP_ERR_INVALID_STATE;
+        goto err_run_exit;
+    }
+    xSemaphoreTake(hSem, portMAX_DELAY);
 
     if (conStatus == CONSOLE_STATUS_NOT_INITIALIZED) {
         result = ESP_ERR_NOT_ALLOWED;
         ESP_LOGW(logConsole2Tag, "Run failed. Console2 must be initilized before!");
-        goto _err_exit;
+        goto err_run_exit;
     } else if (conStatus == CONSOLE_STATUS_RUNNED) {
-        goto _err_exit;
+        goto good_run_exit;
     }
 
-    if (xTaskCreate(_vConsole2Task, "console", CONFIG_CONSOLE2_TASK_HEAP_STACK_SIZE, this, tskIDLE_PRIORITY, &_xTaskHandle) != pdTRUE) {
-        ESP_LOGE(logConsole2Tag, "Error: %d. Failed to run console task", result);
-        result = ESP_FAIL;
-        goto _err_exit;
+    result = start();
+    if (result != ESP_OK) {
+        goto err_run_exit;
     }
-
     conStatus = CONSOLE_STATUS_RUNNED;
-    return ESP_OK;   
+    goto good_run_exit; 
     
-_err_exit:
-    ESP_LOGE(logConsole2Tag, "Error: %d. Failed to start console!", result);
+err_run_exit:
+    ESP_LOGE(logConsole2Tag, "Error: %d. Failed to run console!", result);
+
+good_run_exit:
+    xSemaphoreGive(hSem);
     return result;
 }
 
 esp_err_t AConsole2::stop(void) noexcept
 {
     esp_err_t result = ESP_OK;
-    // TODO: проверить статус CONSOLE_STATUS_RUNNED, затем послать сигнал потоку консоли (через NOTIFY или Queue) для корректного завершения попробовать кинуть символ ENTER
-    // в Stdin fputs("\n", stdin);
+    if (hSem == NULL) {
+        result = ESP_ERR_INVALID_STATE;
+        goto err_stop_exit;
+    }
+    xSemaphoreTake(hSem, portMAX_DELAY);
 
-    // if (result != ESP_OK) {
-    //     ESP_LOGE(logConsole2Tag, "Error: %d. Failed to deinitialize console!", result);
-    // }
+    if (conStatus != CONSOLE_STATUS_RUNNED) {
+        goto err_stop_exit;
+    }
+
+    result = terminate();
+    if (result != ESP_OK) {
+        goto err_stop_exit;
+    }
 
     conStatus = CONSOLE_STATUS_INITIALIZED;
-    
+    goto good_stop_exit; 
+
+err_stop_exit:
+    ESP_LOGE(logConsole2Tag, "Error: %d. Failed to stop console!", result);
+
+good_stop_exit:
+    xSemaphoreGive(hSem);
     return result;
 }
 
-void AConsole2::_vConsole2Task(void *pvParameters)
+const char *AConsole2::getMsgHelp2EnterConsole(void)
 {
-    esp_err_t err = ESP_OK;
-    char* line; int ret;
-    AConsole2 *pConsole = (AConsole2*) pvParameters;
+    static const char* msg = "Press <ENTER> to enter command line interface.\n\r";
+    return msg;
+}
 
-
-    /* Console Task Initializer */
-    err = pConsole->_init_console_library();
-    if (err) {
-        ESP_LOGE(logConsole2Tag, "Failed to initialize console library!");
-        goto err_task_exit;
-    }
-
-    /* Register system commands */
-    if (esp_console_register_help_command() != ESP_OK) {
-        goto err_task_exit;
-    }
-
-    if (esp_console_cmd_register(&cmd_exit) != ESP_OK) {
-        goto err_task_exit;
-    }
-
-    register_system_common();
-
-    printf("\n"
+const char *AConsole2::getMsgStandartGreeting(void)
+{
+    static const char* msg = "\n"
             CONFIG_CONSOLE2_GREETINGS_MESSAGE "\n \
 Type 'help' to get the list of commands.\n \
 Use <UP>/<DOWN> arrows to navigate through command history.\n \
 Press <TAB> when typing command name to auto-complete. \n \
-Type 'exit' to terminate the console environment.\n");
+Type 'exit' to terminate the console environment.\n";
 
-    if (linenoiseIsDumbMode()) {
-        printf("\n \
-Your terminal application does not support escape sequences.\n \
-Line editing and history features are disabled.\n \
-On Windows, try using Windows Terminal or Putty instead.\n");
-    }
-
-    /* Main loop */
-    while(true) {
-        /* Get a line using linenoise.
-         * The line is returned when ENTER is pressed.
-         */
-        line = linenoise(pConsole->_prompt);
-
-        if (line == NULL) { /* Ignore empty lines */
-            continue;
-        }
-
-        /* Add the command to the history if not empty*/
-        if (strlen(line) > 0) {
-            linenoiseHistoryAdd(line);
-#if CONFIG_CONSOLE_STORE_HISTORY
-            /* Save command history to filesystem */
-            linenoiseHistorySave(HISTORY_PATH);
-#endif // CONFIG_CONSOLE_STORE_HISTORY
-        }
-
-        /* Try to run the command */
-        err = esp_console_run(line, &ret);
-        if (err == ESP_ERR_NOT_FOUND) {
-            printf("Unrecognized command\n");
-        } else if (err == ESP_ERR_INVALID_ARG) {
-            // command was empty
-        } else if (ret == CONSOLE2_SIG_TEMRINATE) {
-            linenoiseFree(line);
-            break;
-        } else if (err == ESP_OK && ret) {
-            printf("Command returned non-zero error code: 0x%x\n", ret);
-        } else if (err != ESP_OK) {
-            printf("Internal error: %d\n", err);
-        }
-        /* linenoise allocates line buffer on the heap, so need to free it */
-        linenoiseFree(line);
-    }
-
-    printf("Console terminated.\n");
-    pConsole->stop();
-
-#ifdef CONFIG_CONSOLE2_PRESSENTER_MSG
-   printf(getHelp2EnterConsoleMsg());
-#endif
-
-err_task_exit:
-    esp_console_deinit();
-    vTaskDelete(NULL);
+    return msg;
 }
-
-esp_err_t AConsole2::_init_console_library(void)
-{
-    /* Initialize the console */
-    esp_console_config_t console_config = ESP_CONSOLE_CONFIG_DEFAULT();
-    console_config.max_cmdline_length = CONFIG_CONSOLE2_MAX_COMMAND_LINE_LENGTH;
-    console_config.max_cmdline_args = CONSOLE2_MAX_CMDLINE_ARGS;
-#if CONFIG_LOG_COLORS
-    console_config.hint_color = atoi(LOG_COLOR_CYAN);
-#endif
-
-
-    esp_err_t result = esp_console_init(&console_config);
-    assert(result == ESP_OK);
-    if (result) return result;
-
-    /* Configure linenoise line completion library */
-    /* Enable multiline editing. If not set, long commands will scroll within
-     * single line.
-     */
-    linenoiseSetMultiLine(1);
-
-    /* Tell linenoise where to get command completions and hints */
-    linenoiseSetCompletionCallback(&esp_console_get_completion);
-    linenoiseSetHintsCallback((linenoiseHintsCallback*) &esp_console_get_hint);
-
-    /* Set command history size */
-    linenoiseHistorySetMaxLen(CONSOLE2_HISTORY_BUFF_SIZE);
-
-    /* Set command maximum length */
-    linenoiseSetMaxLineLen(console_config.max_cmdline_length);
-
-    /* Don't return empty lines */
-    linenoiseAllowEmpty(false);
-
-    /* Figure out if the terminal supports escape sequences */
-    const int probe_status = linenoiseProbe();
-    if (probe_status) {         /* zero indicates success */
-        linenoiseSetDumbMode(1);
-    }
-
-    return ESP_OK;
-}
-
 
 const char *AConsole2::setup_prompt(const char *prompt_str)
 {
     /* set command line prompt */
-    memset(_prompt, 0, CONSOLE2_PROMPT_MAX_LENGTH);
+    memset(prompt, 0, CONSOLE2_PROMPT_MAX_LENGTH);
     const char *prompt_temp = CONSOLE2_PROMPT_PREFIX;
     if (prompt_str) prompt_temp = prompt_str;
-    snprintf(_prompt, CONSOLE2_PROMPT_MAX_LENGTH - 1, LOG_COLOR_I "%s " LOG_RESET_COLOR, prompt_temp);
+    snprintf(prompt, CONSOLE2_PROMPT_MAX_LENGTH - 1, LOG_COLOR_I "%s " LOG_RESET_COLOR, prompt_temp);
 
     if (linenoiseIsDumbMode()) {
 #if CONFIG_LOG_COLORS
         /* Since the terminal doesn't support escape sequences,
          * don't use color codes in the s_prompt.
          */
-        snprintf(_prompt, CONSOLE_PROMPT_MAX_LEN - 1, "%s ", prompt_temp);
+        snprintf(prompt, CONSOLE_PROMPT_MAX_LEN - 1, "%s ", prompt_temp);
 #endif //CONFIG_LOG_COLORS
     }
-    return _prompt;
+
+    return prompt;
 }

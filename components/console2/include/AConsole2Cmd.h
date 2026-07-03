@@ -28,7 +28,11 @@ class AConsole2Cmd {
     friend class AConsole2;
 
 public:
-    const char* getCommand() const { return _console_cmd.command; };
+
+    AConsole2Cmd(AConsole2Cmd&& cmd) noexcept {};
+    
+    const esp_console_cmd_t* getCommand() const { return &_console_cmd; };
+    esp_console_cmd_t* getCommand2() { return &_console_cmd; };
 
     virtual int exec_func_cb(int argc, char* argv[]) = 0;
 

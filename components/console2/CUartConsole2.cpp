@@ -1,8 +1,10 @@
 #include "CUartConsole2.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include "esp_log.h"
 #include "esp_console.h"
+#include "cmd_system.h"
 #include "soc/soc_caps.h"
 #include "driver/uart_vfs.h"
 #include "hal/uart_ll.h"
@@ -10,10 +12,174 @@
 #include "driver/usb_serial_jtag_vfs.h"
 #include "esp_vfs_cdcacm.h"
 #include "linenoise/linenoise.h"
+#include "console2_defs.h"
 
 
-// #include "console2_defs.h"
+// System exit console command
+esp_console_cmd_t cmd_exit = {
+    .command = "exit",
+    .help = "Exit from console",
+    .hint = NULL,
+    .func = nullptr,
+    .argtable = nullptr,
+    .func_w_context = [](void *context, int argc, char **argv) {
+        return 0xDEAD; // CONSOLE2_SIG_TEMRINATE
+    }
+};
 
+
+void CUartConsole2::_vConsole2Task(void *pvParameters)
+{
+    esp_err_t err = ESP_OK;
+    char* line; int ret;
+    CUartConsole2 *pConsole = (CUartConsole2*) pvParameters;
+    auto it_cmd { cmdList.cbegin() };
+
+    /* Console Task Initializer */
+    err = pConsole->_init_console_library();
+    if (err) {
+        ESP_LOGE(logConsole2Tag, "Failed to initialize console library!");
+        goto err_task_exit;
+    }
+
+    /* Register system commands */
+    if (esp_console_register_help_command() != ESP_OK) {
+        goto err_task_exit;
+    }
+
+    if (esp_console_cmd_register(&cmd_exit) != ESP_OK) {
+        goto err_task_exit;
+    }
+
+    extern void register_system_common(void);
+    register_system_common();
+
+
+
+    while (it_cmd != cmdList.cend()) {
+        auto b = it_cmd->getCommand();
+        ++it_cmd;
+    }
+    // Блок регистрации команд пользователя
+    // esp_console_cmd_register(&command._console_cmd);
+
+    // Print Greeting message
+    printf(getMsgStandartGreeting());
+
+    if (linenoiseIsDumbMode()) {
+        printf("\n \
+Your terminal application does not support escape sequences.\n \
+Line editing and history features are disabled.\n \
+On Windows, try using Windows Terminal or Putty instead.\n");
+    }
+
+    /* Main loop */
+    while(true) {
+
+        /* Get a line using linenoise.
+         * The line is returned when ENTER is pressed.
+         */
+        line = linenoise(pConsole->prompt);
+
+        if (line == NULL) { /* Ignore empty lines */
+            continue;
+        }
+
+        /* Add the command to the history if not empty*/
+        if (strlen(line) > 0) {
+            linenoiseHistoryAdd(line);
+#if CONFIG_CONSOLE_STORE_HISTORY
+            /* Save command history to filesystem */
+            linenoiseHistorySave(HISTORY_PATH);
+#endif // CONFIG_CONSOLE_STORE_HISTORY
+        }
+
+        /* Try to run the command */
+        err = esp_console_run(line, &ret);
+        if (err == ESP_ERR_NOT_FOUND) {
+            printf("Unrecognized command\n");
+        } else if (err == ESP_ERR_INVALID_ARG) {
+            // command was empty
+        } else if (ret == 0xDEAD) { // CONSOLE2_SIG_TEMRINATE
+            linenoiseFree(line);
+            break;
+        } else if (err == ESP_OK && ret) {
+            printf("Command returned non-zero error code: 0x%x\n", ret);
+        } else if (err != ESP_OK) {
+            printf("Internal error: %d\n", err);
+        }
+
+        /* linenoise allocates line buffer on the heap, so need to free it */
+        linenoiseFree(line);
+    }
+
+    xSemaphoreTake(pConsole->hSem, portMAX_DELAY);
+    printf("Console terminated.\n");
+    pConsole->conStatus = CONSOLE_STATUS_INITIALIZED;
+
+#ifdef CONFIG_CONSOLE2_PRESSENTER_MSG
+   printf("Press <ENTER> to enter command line interface.\n\r");
+#endif
+
+err_task_exit:
+    esp_console_deinit();
+    xSemaphoreGive(pConsole->hSem);
+    vTaskDelete(NULL);
+}
+
+esp_err_t CUartConsole2::_init_console_library(void)
+{
+    /* Initialize the console */
+    esp_console_config_t console_config = ESP_CONSOLE_CONFIG_DEFAULT();
+    console_config.max_cmdline_length = CONFIG_CONSOLE2_MAX_COMMAND_LINE_LENGTH;
+    console_config.max_cmdline_args = CONSOLE2_MAX_CMDLINE_ARGS;
+#if CONFIG_LOG_COLORS
+    console_config.hint_color = atoi(LOG_COLOR_CYAN);
+#endif
+
+
+    esp_err_t result = esp_console_init(&console_config);
+    assert(result == ESP_OK);
+    if (result) return result;
+
+    /* Configure linenoise line completion library */
+    /* Enable multiline editing. If not set, long commands will scroll within
+     * single line.
+     */
+    linenoiseSetMultiLine(1);
+
+    /* Tell linenoise where to get command completions and hints */
+    linenoiseSetCompletionCallback(&esp_console_get_completion);
+    linenoiseSetHintsCallback((linenoiseHintsCallback*) &esp_console_get_hint);
+
+    /* Set command history size */
+    linenoiseHistorySetMaxLen(CONSOLE2_HISTORY_BUFF_SIZE);
+
+    /* Set command maximum length */
+    linenoiseSetMaxLineLen(console_config.max_cmdline_length);
+
+    /* Don't return empty lines */
+    linenoiseAllowEmpty(false);
+
+    /* Figure out if the terminal supports escape sequences */
+    const int probe_status = linenoiseProbe();
+    if (probe_status) {         /* zero indicates success */
+        linenoiseSetDumbMode(1);
+    }
+
+    return ESP_OK;
+}
+
+CUartConsole2::CUartConsole2()
+{
+    cmd_exit.context = this;
+}
+
+esp_err_t CUartConsole2::stop(void) noexcept
+{
+    ESP_LOGW(logConsole2Tag, "Warning! Console stop operation is not supported!");
+    return ESP_ERR_NOT_SUPPORTED;
+}
 
 esp_err_t CUartConsole2::start(void)
 {
@@ -23,11 +189,14 @@ esp_err_t CUartConsole2::start(void)
     // _disable_isr();
 #endif
     
-    // TODO: Реализовать запуск консоли
+    if (xTaskCreate(_vConsole2Task, "console", CONFIG_CONSOLE2_TASK_HEAP_STACK_SIZE, this, tskIDLE_PRIORITY, &_xTaskHandle) != pdTRUE) {
+        ESP_LOGE(logConsole2Tag, "Error: %d. Failed to run console task", result);
+        result = ESP_FAIL;
+    }
+    xTaskNotify(_xTaskHandle, 0, eNoAction);
 
     return result;
 }
-
 
 esp_err_t CUartConsole2::init_periph(void)
 {
@@ -131,4 +300,3 @@ inline esp_err_t CUartConsole2::_init_n_enable_isr(void)
 
     return result;
 }
-

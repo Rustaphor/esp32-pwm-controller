@@ -1,10 +1,11 @@
 #pragma once
 
 #include <string>
-#include "sdkconfig.h"
+#include <vector>
 #include "esp_err.h"
 #include "AConsole2Cmd.h"
-#include <freertos/task.h>
+#include "freertos/semphr.h"
+
 
 #define CONSOLE2_PROMPT_MAX_LENGTH 16
 
@@ -25,7 +26,7 @@ using namespace std;
 
 class AConsole2 {
 
-    
+
 public:
 
     /**
@@ -36,27 +37,42 @@ public:
     /**
      * Инициализация и деинициализация консоли
      * 
-     * @details Инициали
+     * @details Инициализация периферии консоли. Потокобезопасно.
      */
     esp_err_t initialize(void) noexcept;
 
     /**
      * Регистрация команды в консоли
      */
-    static esp_err_t registerCommand(AConsole2Cmd& command) noexcept;
+    static void registerCommand(const AConsole2Cmd& command) noexcept;
 
     /**
      * Запуск консоли пользователем
      * 
-     * @details Команда должна создавать поток (задачу) в которой будет работать библиотека консоли *linenoise*. Вызывает метод `start()`
+     * @details Команда запускает консоль, в случае UART, создается задача и работает библиотека консоли *linenoise*. Потокобезопасно.
      */
     esp_err_t run(void) noexcept;
 
 
+    /**
+     * Остановка консоли
+     * 
+     * @details Останавливает консоль, в случае UART, отправляется сигнал о завершении потока. Потокобезопасно.
+     */
     esp_err_t stop(void) noexcept;
 
 
 protected:
+
+    SemaphoreHandle_t hSem = NULL;
+    console2_status conStatus = CONSOLE_STATUS_NOT_INITIALIZED;
+    char prompt[CONSOLE2_PROMPT_MAX_LENGTH];
+    static vector<const AConsole2Cmd*> cmdList;
+
+    AConsole2() {
+        vSemaphoreCreateBinary(hSem);
+    }
+
 
     // Вызывается из initialize()
     virtual esp_err_t init_periph(void) = 0;
@@ -64,23 +80,17 @@ protected:
     // Вызывается из run()
     virtual esp_err_t start(void) = 0;
 
-    static const char* getHelp2EnterConsoleMsg(void) {
-        static const char* greetings = "Press <ENTER> to enter command line interface.\n\r";
-        return greetings;
-    }
+    // Вызывается из stop()
+    virtual esp_err_t terminate(void) { return ESP_OK; };
+
+    // Стандартные статические сообщения (подсказки)
+    static const char* getMsgHelp2EnterConsole(void);
+    static const char* getMsgStandartGreeting(void);
 
     /**
      * Return prompt string if it is set, otherwise return default prompt string
      */
     const char* setup_prompt(const char* prompt_str = NULL);
 
-    console2_status conStatus = CONSOLE_STATUS_NOT_INITIALIZED;
-
-private:
-
-    TaskHandle_t _xTaskHandle;
-    static void _vConsole2Task(void* pvParameters);
-    char _prompt[CONSOLE2_PROMPT_MAX_LENGTH];
-    esp_err_t _init_console_library(void);
 };
 

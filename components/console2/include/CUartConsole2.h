@@ -1,8 +1,8 @@
 #pragma once
 
 #include "AConsole2.h"
-#include "sdkconfig.h"
 #include "driver/uart.h"
+#include "freertos/task.h"
 #include "freertos/queue.h"
 
 
@@ -21,18 +21,17 @@
 #define CONSOLE2_UART_BUFF_SIZE 256
 #define CONSOLE2_UART_PATTERT ENTER
 
-// CONFIG_ESP_CONSOLE_UART_NUM
-
 
 class CUartConsole2 : public AConsole2{
 
+    TaskHandle_t _xTaskHandle;
     QueueHandle_t _hUartQueue = NULL;
     uart_event_t _event;
     unsigned char _ch[1];
     size_t _buffered_size;
 
 public:
-    CUartConsole2() {};
+    CUartConsole2();
 
     /**
      * Dispatch infinitive Loop from any Task (no blocking)
@@ -62,6 +61,8 @@ public:
         }
     }
 
+    esp_err_t stop(void) noexcept;
+
 protected:
 
     esp_err_t start(void) override;
@@ -69,6 +70,8 @@ protected:
 
 private:
 
+    static void _vConsole2Task(void* pvParameters);
+    esp_err_t _init_console_library(void);
     inline esp_err_t _init_n_enable_isr(void); 
     inline esp_err_t _disable_isr(void) { return uart_disable_rx_intr(CONSOLE2_UART_NUM); }
 };
