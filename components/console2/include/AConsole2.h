@@ -1,6 +1,4 @@
 #pragma once
-
-#include <string>
 #include <vector>
 #include "esp_err.h"
 #include "AConsole2Cmd.h"
@@ -13,7 +11,7 @@ typedef enum {
     CONSOLE_STATUS_NOT_INITIALIZED = 0x100,
     CONSOLE_STATUS_INITIALIZED,
     CONSOLE_STATUS_RUNNED
-} console2_status;
+} console2_stat;
 
 /* Console command history can be stored to and loaded from a memory. */
 #if CONFIG_CONSOLE_STORE_HISTORY
@@ -33,7 +31,7 @@ public:
     /**
      * Получить текущее состояние консоли
      */
-    console2_status getState(void) noexcept { return conStatus; }
+    console2_stat getState(void) noexcept { return conStatus; }
 
     /**
      * Инициализация и деинициализация консоли
@@ -66,7 +64,7 @@ public:
 protected:
 
     SemaphoreHandle_t hSem = NULL;
-    console2_status conStatus = CONSOLE_STATUS_NOT_INITIALIZED;
+    console2_stat conStatus = CONSOLE_STATUS_NOT_INITIALIZED;
     char prompt[CONSOLE2_PROMPT_MAX_LENGTH];
 
     AConsole2() {

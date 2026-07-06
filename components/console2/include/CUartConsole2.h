@@ -42,21 +42,27 @@ public:
     inline void dispatch(void){
 
         // Check UART_DATA event data (start console) without blocking
-        if (_hUartQueue && xQueueReceive(_hUartQueue, (void*) &_event, 0) == pdTRUE) {
-            if (conStatus != CONSOLE_STATUS_INITIALIZED) return;
+        if (_hUartQueue && xQueueReceive(_hUartQueue, (void*) &_event, 0) == pdPASS) {
 
-            // Данные в буфере
-            if (_event.type == UART_DATA) {
-                _ch[0] = 0;
-                uart_read_bytes(CONSOLE2_UART_NUM, _ch, sizeof(_ch), portMAX_DELAY);
+            if (xSemaphoreTake(hSem, 100) == pdPASS) {
 
-                // Проверка клавиши 'Enter'
-                if (_ch[0] == ENTER) {
-                    run();
+                if (conStatus != CONSOLE_STATUS_INITIALIZED) return;
+
+                // Данные в буфере
+                if (_event.type == UART_DATA) {
+                    _ch[0] = 0;
+                    uart_read_bytes(CONSOLE2_UART_NUM, _ch, sizeof(_ch), portMAX_DELAY);
+
+                    // Проверка клавиши 'Enter'
+                    if (_ch[0] == ENTER) {
+                        run();
+                    }
+
+                    uart_flush_input(CONSOLE2_UART_NUM);
+                    // xQueueReset(_hUartQueue);
                 }
 
-                uart_flush_input(CONSOLE2_UART_NUM);
-                // xQueueReset(_hUartQueue);
+                xSemaphoreGive(hSem);
             }
         }
     }

@@ -19,7 +19,7 @@ esp_err_t AConsole2::initialize(void)
     esp_err_t result = ESP_OK;
     if (hSem == NULL) {
         result = ESP_ERR_INVALID_STATE;
-        goto end_init;
+        return result;
     }
 
     xSemaphoreTake(hSem, portMAX_DELAY);
@@ -76,7 +76,7 @@ esp_err_t AConsole2::run(void)
     esp_err_t result = ESP_OK;
     if (hSem == NULL) {
         result = ESP_ERR_INVALID_STATE;
-        goto err_run_exit;
+        return result;
     }
     xSemaphoreTake(hSem, portMAX_DELAY);
 
@@ -108,7 +108,7 @@ esp_err_t AConsole2::stop(void) noexcept
     esp_err_t result = ESP_OK;
     if (hSem == NULL) {
         result = ESP_ERR_INVALID_STATE;
-        goto err_stop_exit;
+        return result;
     }
     xSemaphoreTake(hSem, portMAX_DELAY);
 
