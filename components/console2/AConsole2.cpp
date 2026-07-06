@@ -63,7 +63,22 @@ void AConsole2::registerCommand(AConsole2Cmd &command)
     }
 
     cmdList.push_back(&command);
-    ESP_LOGI(logConsole2Tag, "Registering console command: %s", command._console_cmd.command);
+    ESP_LOGI(logConsole2Tag, "Register console command: %s", command._console_cmd.command);
+}
+
+void AConsole2::unregisterCommand(AConsole2Cmd &command) noexcept
+{
+    // Проверка на поворное добавление одной и той же команды
+    auto it { cmdList.begin() };
+    while (it != cmdList.end()) {
+        if (*it == &command) {
+            cmdList.erase(it);
+            break;
+        }
+        ++it;
+    }
+
+    ESP_LOGI(logConsole2Tag, "Unregister console command: %s", command._console_cmd.command);
 }
 
 const vector<const AConsole2Cmd *> &AConsole2::getCommandList(void) noexcept

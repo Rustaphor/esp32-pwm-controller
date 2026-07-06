@@ -1,8 +1,6 @@
-
-/* PWM AC FAN Motor Controller
-
-*/
-
+/*
+ * PWM AC FAN Motor Controller
+ */
 
 #include <string>
 
@@ -21,9 +19,9 @@
 #include "CMotorDrive.h"
 
 #include "CUartConsole2.h"
+#include "CInfoCmd.h"
 
 #include <freertos/semphr.h>
-
 
 
 static const char* TAG = __FILE_NAME__;       // Локальный тег логирования модуля
@@ -108,7 +106,7 @@ void vApplicationIdleHook(void) {
 //         print_thread_info();
 //         this_thread::sleep_for(sleep_time);
 //     }
-//     }
+// }
 
 // Thread config creator
 // esp_pthread_cfg_t create_config(const char *name, int core_id, int stack, int prio)
@@ -133,6 +131,9 @@ extern "C" [[noreturn]] void app_main(void)
     motor.run();
 
     console2.initialize();
+    CInfoCmd infoCmd;
+    console2.registerCommand(infoCmd);
+    
   
     // wifi_initialize(WIFI_MODE_APSTA);
     
@@ -167,5 +168,4 @@ extern "C" [[noreturn]] void app_main(void)
         this_thread::sleep_for(sleep_time);
     }
 }
-
 

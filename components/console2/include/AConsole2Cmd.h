@@ -28,11 +28,23 @@ class AConsole2Cmd {
     friend class AConsole2;
 
 public:
+    /**
+     * @brief Возвращает указатель на приватную структуру консольной команды.
+     *
+     * @return Указатель на константную структуру esp_console_cmd_t с описанием команды.
+     */
+    const esp_console_cmd_t* getCommand() const { return &_console_cmd; }
 
-    AConsole2Cmd(AConsole2Cmd&& cmd) noexcept {};
-    
-    const esp_console_cmd_t* getCommand() const { return &_console_cmd; };
-
+    /**
+     * @brief Виртуальная функция-обработчик команды. Основная точка входа команды (execution)
+     *
+     * @details Должна быть реализована в производных классах. Обрабатывает выполнение команды
+     *          с заданными аргументами.
+     *
+     * @param[in] argc Количество аргументов командной строки.
+     * @param[in] argv Массив аргументов командной строки.
+     * @return Код возврата (обычно 0 для успешного завершения).
+     */
     virtual int exec_func_cb(int argc, char* argv[]) = 0;
 
 protected:
