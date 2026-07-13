@@ -1,9 +1,0 @@
-## IDF Component Manager Manifest File
-version: "0.1.0~1"
-description: Console2 C++ library for ESP-IDF
-# url: https://github.com/espressif/idf-extra-components/tree/master/iqmath
-dependencies:
-  idf:
-    version: ">=5.0"
-  cmd_system:
-    path: ${IDF_PATH}/examples/system/console/advanced/components/cmd_system
