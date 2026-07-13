@@ -10,7 +10,7 @@ CUartConsole2 con2;
 TEST_CASE("Test Console2 initialization", "[console2]")
 {
 
-    CPwmCtrl pwm_cmd;
+    CMotorCtrl pwm_cmd;
 
     // Первая инициализация
     TEST_ASSERT_FALSE_MESSAGE(con2.initialize(),"Error: fail Console2 initialize.");

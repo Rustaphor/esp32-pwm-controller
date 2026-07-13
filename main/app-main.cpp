@@ -17,7 +17,7 @@
 
 #include "esp_log.h"
 #include "CMotorDrive.h"
-
+#include "CMotorCtrl.h"
 #include "CUartConsole2.h"
 #include "CInfoCmd.h"
 
@@ -130,9 +130,14 @@ extern "C" [[noreturn]] void app_main(void)
     this_thread::sleep_for(milliseconds{200});
     motor.run();
 
+    /*
+    * Блок инициализации и отладочной консоли
+    */
     console2.initialize();
     CInfoCmd infoCmd;
+    CMotorCtrl mCtrl;
     console2.registerCommand(infoCmd);
+    console2.registerCommand(mCtrl);
     
   
     // wifi_initialize(WIFI_MODE_APSTA);
