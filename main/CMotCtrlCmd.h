@@ -3,7 +3,7 @@
 #include "AConsole2Cmd.h"
 
 
-class CMotorCtrl : public AConsole2Cmd {
+class CMotCtrlCmd : public AConsole2Cmd {
 
     constexpr static const char* _command = "motor";
     constexpr static const char* _help = "\
@@ -13,7 +13,7 @@ class CMotorCtrl : public AConsole2Cmd {
 
 public:
 
-    CMotorCtrl() : AConsole2Cmd(_command, _help) {};
+    CMotCtrlCmd() : AConsole2Cmd(_command, _help) {};
     int exec_func_cb(int argc, char* argv[]) override;
 
 };

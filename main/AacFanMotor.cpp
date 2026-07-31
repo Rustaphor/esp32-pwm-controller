@@ -8,8 +8,6 @@
 #include "IQmathLib.h"
 
 
-#include <iostream>
-
 acmot_err_t AacFanMotor::_run(acmot_sineval_t powerOut)
 {
 
@@ -64,11 +62,12 @@ acmot_err_t AacFanMotor::stop()
     return result;
 }
 
-acmot_err_t AacFanMotor::setPower(float powerOut) noexcept
+acmot_err_t AacFanMotor::setPowerPercents(float powerOut) noexcept
 {
-    sem.acquire();
     acmot_err_t result = AC_MOTOR_OK;
     acmot_sineval_t val;
+
+    sem.acquire();
 
     // Проверка инициализирован ли мотор
     if (_m_status == AC_MOTOR_NOT_INITIALIZED) {
@@ -77,11 +76,11 @@ acmot_err_t AacFanMotor::setPower(float powerOut) noexcept
     }
 
     // Проверка корректности входных данных
-    if (powerOut < 0 || powerOut > 100) {
+    if (!checkPowerPercentsValue(powerOut)) {
         result = AC_ERR_MOTOR_INVALID_POWER;
         goto end_set_power;
     }
-    val = _setPowerOutImmediately(powerOut);
+    val = _setPowerOutImmediatelyLL(AacFanMotor::_calcMaxSineValueInPercents(powerOut));
 
     // Если нуль, по факту остановка мотора
     if (val == 0 && _m_status == AC_MOTOR_IS_RUNNING)
@@ -185,9 +184,9 @@ end_deinit:
     return result;
 }
 
-_GLIBCXX_NODISCARD acmot_sineval_t AacFanMotor::_calcMaxSineValue(float powerOut) noexcept
+_GLIBCXX_NODISCARD acmot_sineval_t AacFanMotor::_calcMaxSineValueInPercents(float powerout_percent) noexcept
 {
-    _iq amp = _IQmpy(_IQ(ACMOTOR_SINE_MAX_VALUE), _IQ(powerOut / 100.0f));
+    _iq amp = _IQmpy(_IQ(ACMOTOR_SINE_MAX_VALUE), _IQ(powerout_percent / 100.0f));
     acmot_sineval_t max_val = _IQtoF(amp);
     return max_val;
 }

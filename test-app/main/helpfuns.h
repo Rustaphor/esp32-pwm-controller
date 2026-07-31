@@ -1,4 +1,5 @@
 #pragma once
+#include <stdlib.h>
 
 // Функция проверки относительной точности
 template<typename T>
@@ -15,6 +16,22 @@ static bool check2ValuesByTolerance(T val1, T val2, const float relTol) {
     }
 
     return false;
+}
+
+// Функция проверки относительной точности
+template<typename T>
+static float calcRelTolErr(const T val1, const T val2) {
+
+    float result = 0;
+    if (val1 == 0 || val2 == 0 ){
+        
+    } elseif (val1 > val2) {
+        result = (val1 - val2)/val1 * 100.0f;
+    } elseif (val1 < val2) {
+        result = (val2 - val1)/val2 * 100.0f;
+    }
+
+    return result;
 }
 
 // Функция проверки сравнительной точности

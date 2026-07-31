@@ -135,7 +135,7 @@ extern "C" [[noreturn]] void app_main(void)
     */
     console2.initialize();
     CInfoCmd infoCmd;
-    CMotorCtrl mCtrl;
+    CMotCtrlCmd mCtrl;
     console2.registerCommand(infoCmd);
     console2.registerCommand(mCtrl);
     

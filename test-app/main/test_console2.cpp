@@ -1,6 +1,5 @@
 #include "unity.h"
-#include "CUartConsole2.h"
-#include "CPwmCtrl.h"
+#include "CMotCtrlCmd.h"
 
 using namespace std;
 
@@ -10,7 +9,7 @@ CUartConsole2 con2;
 TEST_CASE("Test Console2 initialization", "[console2]")
 {
 
-    CMotorCtrl pwm_cmd;
+    CMotCtrlCmd pwm_cmd;
 
     // Первая инициализация
     TEST_ASSERT_FALSE_MESSAGE(con2.initialize(),"Error: fail Console2 initialize.");

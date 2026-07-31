@@ -12,7 +12,7 @@ static const char* logTAG = "MotorControl";
 using namespace std;
 
 // Реализация виртуальной функции
-int CMotorCtrl::exec_func_cb(int argc, char* argv[]) {
+int CMotCtrlCmd::exec_func_cb(int argc, char* argv[]) {
 
     // TODO: в бибилиотеке нало обязательно блокировать семафор
     int exitcode = ESP_OK;

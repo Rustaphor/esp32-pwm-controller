@@ -36,7 +36,7 @@ public:
      */
     AacFanMotor(acmot_sinefreq_t sine_wave_freq, float powerOut = 0.0f) : _currentSineFreq{sine_wave_freq}{
         if (powerOut > 0 && powerOut <= 100) {
-            _currentAmplitude = AacFanMotor::_calcMaxSineValue(powerOut);
+            _currentAmplitude = AacFanMotor::_calcMaxSineValueInPercents(powerOut);
         } else {
             _currentAmplitude = 0;
         }
@@ -77,7 +77,12 @@ public:
      * @param powerOut - power output as percentage (0-100)
      * @return AC_MOTOR_OK on success
      */
-    acmot_err_t setPower(float powerOut) noexcept;
+    acmot_err_t setPowerPercents(float powerOut) noexcept;
+
+    constexpr static inline bool checkPowerPercentsValue(float powerVal) {
+        if (powerVal < 0 || powerVal > 100) return false;
+        return true;
+    }
 
     /**
      * @brief Мощноость мотора в пересчитанных процентах
@@ -154,14 +159,9 @@ private:
     }
 
     _GLIBCXX_NODISCARD
-    static acmot_sineval_t _calcMaxSineValue(float powerOut) noexcept;
+    static acmot_sineval_t _calcMaxSineValueInPercents(float powerout_percent) noexcept;
 
     acmot_sineval_t _setPowerOutImmediatelyLL(acmot_sineval_t powerOut) noexcept;
-    inline acmot_sineval_t _setPowerOutImmediately(float powerOut) noexcept {
-        auto max_val = AacFanMotor::_calcMaxSineValue(powerOut);
-        return _setPowerOutImmediatelyLL(max_val);
-    };
-
     acmot_err_t _run(acmot_sineval_t powerOut);
 
     _GLIBCXX_NODISCARD

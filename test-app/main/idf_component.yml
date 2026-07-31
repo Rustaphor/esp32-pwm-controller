@@ -4,7 +4,5 @@ dependencies:
   idf:
     version: ">=5.0"
 
-# NOTE! It's link to managed component in main application. First to download one you have to configure main application!
-  espressif/iqmath:
-    path: ../../managed_components/espressif__iqmath
-  
+  espressif/iqmath: "^1.11.0"
+  #   path: ../../managed_components/espressif__iqmath

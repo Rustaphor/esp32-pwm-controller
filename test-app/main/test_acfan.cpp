@@ -10,15 +10,18 @@
 
 using namespace std;
 
+CTestAacFanMotor motor{MOTOR_WAVE_FREQ, 100.0f};    // Default motor
 
-TEST_CASE("Test AacFanMotor init-deinit", "[acfan]")
-{
-    CTestAacFanMotor motor{MOTOR_WAVE_FREQ,100.0f};
-    TEST_ASSERT_EQUAL(AC_MOTOR_NOT_INITIALIZED, motor.getCurrentState());
+// Запускается перед каждым тестом
+void motor_init(CTestAacFanMotor &mot = motor){
+    TEST_ASSERT_EQUAL_MESSAGE(AC_MOTOR_NOT_INITIALIZED, mot.getCurrentState(), "Error state. Motor is already initialized.");
+    mot.initialize();
+    TEST_ASSERT_EQUAL(AC_MOTOR_INITIALIZED, mot.getCurrentState());
+}
 
-    motor.initialize();
-    TEST_ASSERT_EQUAL(AC_MOTOR_INITIALIZED, motor.getCurrentState());
-
+// Запускается после каждого теста
+void motor_deinit(CTestAacFanMotor &mot = motor){
+    TEST_ASSERT_TRUE_MESSAGE(AC_MOTOR_NOT_INITIALIZED != mot.getCurrentState(), "Error state! Motor is already not initialized.");
     motor.deinitialize();
     TEST_ASSERT_EQUAL(AC_MOTOR_NOT_INITIALIZED, motor.getCurrentState());
 }
@@ -31,10 +34,10 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-90 degs", "[acfan]
     const acmot_sineval_t MaxValue = 8000U;           // Амплитуда квантования
     const float relTolerance = 2.0f;                // Точность расхождения в процентах
 
-    CTestAacFanMotor motor{ACMOTOR_SINE_MIN_FREQ, 100.0f};
-    TEST_ASSERT_FALSE_MESSAGE(motor.initialize(),"Error: fail Motor initialize.");
+    CTestAacFanMotor mot{ACMOTOR_SINE_MIN_FREQ, 100.0f};
+    motor_init(mot);
 
-    const acmot_sineval_t Offset = motor.calcSineBufferLength(ACMOTOR_SINE_MIN_FREQ);
+    const acmot_sineval_t Offset = mot.calcSineBufferLength(ACMOTOR_SINE_MIN_FREQ);
     
     // Создание тестового буфера и заполнение его синусом
     acmot_sineval_t* p1 = new acmot_sineval_t[Offset];
@@ -46,15 +49,18 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-90 degs", "[acfan]
     }
 
     // Заполнение его синусом тестируемого объекта
-    motor.test_fillSineBuffer(MaxValue, MaxAngle);
+    mot.test_fillSineBuffer(MaxValue, MaxAngle);
 
     // Сравнение результатов
+    bool matched = false;
     for (int i = 0; i < Offset; ++i) {
-        TEST_ASSERT_TRUE(check2ValuesByTolerance(expectBuff.first[i], motor.get_SineBuffer().first[i], relTolerance));
+        matched = check2ValuesByTolerance(expectBuff.first[i], mot.get_SineBuffer().first[i], relTolerance);
+        if (!matched) break;
     }
 
-    motor.deinitialize();
+    motor_deinit(mot);
     delete[] p1;
+    TEST_ASSERT_TRUE(matched);
 }
 
 
@@ -66,10 +72,10 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-180 degs", "[acfan
     const float relTolerance = 6.5f;                // Точность расхождения в процентах (в библиетеке IQmath набегающая погрешность)
     const acmot_sinefreq_t MOTOR_SINE_FREQ = MOTOR_WAVE_FREQ;
 
-    CTestAacFanMotor motor{MOTOR_SINE_FREQ, 100.0f};
-    TEST_ASSERT_FALSE_MESSAGE(motor.initialize(),"Error: fail Motor initialize.");
+    CTestAacFanMotor mot{MOTOR_SINE_FREQ, 100.0f};
+    motor_init(mot);
 
-    const acmot_sineval_t Offset = motor.calcSineBufferLength(MOTOR_SINE_FREQ);
+    const acmot_sineval_t Offset = mot.calcSineBufferLength(MOTOR_SINE_FREQ);
     
     // Создание тестового буфера и заполнение его синусом
     acmot_sineval_t* p1 = new acmot_sineval_t[Offset];
@@ -85,86 +91,89 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-180 degs", "[acfan
     ccomp_timer_start();
 #endif
     // Заполнение его синусом тестируемого объекта
-    motor.test_fillSineBuffer(MaxValue, MaxAngle);
+    mot.test_fillSineBuffer(MaxValue, MaxAngle);
 #if DISABLED_FOR_TARGETS(linux)
     int64_t t = ccomp_timer_stop();
     cout << "Time: " << t << " us";
 #endif
 
     // Сравнение результатов
+    bool matched = false;
     for (int i = 0; i < Offset; ++i) {
-        TEST_ASSERT_TRUE(check2ValuesByTolerance(expectBuff.first[i], motor.get_SineBuffer().first[i], relTolerance));
+        matched = check2ValuesByTolerance(expectBuff.first[i], mot.get_SineBuffer().first[i], relTolerance);
+        if (!matched) break;
     }
 
-    motor.deinitialize();
+    motor_deinit(mot);
     delete[] p1;
+    TEST_ASSERT_TRUE(matched);
 }
 
 
-TEST_CASE("Test AacFanMotor setting Output Power", "[acfan]"){
-    CTestAacFanMotor motor{MOTOR_WAVE_FREQ, 0.0f};
-    TEST_ASSERT_FALSE_MESSAGE(motor.initialize(),"Error: fail Motor initialize.");
+TEST_CASE("Test AacFanMotor setting Output Power Percents", "[acfan]"){
+    motor_init();
 
     float in_range[] = {0.0f, 0.001f, 10.0f, 12.2f, 12.31f, 40.0f, 50.0f, 100.0f};
+    float a,b;
     for (auto cur_val : in_range) {
-        TEST_ASSERT_FALSE(motor.setPower(cur_val));
-        TEST_ASSERT_TRUE(check2ValuesByTolerance(motor.getPowerOutPercent(), cur_val, 0.30f));
+        TEST_ASSERT_FALSE(motor.setPowerPercents(cur_val));
+        a = motor.getPowerOutPercent();
+        b = cur_val;
+        TEST_ASSERT_TRUE(check2ValuesByTolerance(a, b, 0.30f));
         }
     
-    motor.deinitialize();
+    motor_deinit();
 }
 
 
 TEST_CASE("Test AacFanMotor out of range setting power value", "[acfan]"){
-    CTestAacFanMotor motor{MOTOR_WAVE_FREQ, 120.0f};
-    TEST_ASSERT_FALSE_MESSAGE(motor.initialize(),"Error: fail Motor initialize.");
+    CTestAacFanMotor mot{MOTOR_WAVE_FREQ, 100.0f};    // Default motor
+    motor_init(mot);
 
     float in_range[] = {-1.0f, 100.01f, 110.0f};
     for (auto cur_val : in_range) {
-        TEST_ASSERT_EQUAL(AC_ERR_MOTOR_INVALID_POWER, motor.setPower(cur_val));
+        TEST_ASSERT_EQUAL(AC_ERR_MOTOR_INVALID_POWER, mot.setPowerPercents(cur_val));
     }
     
-    motor.deinitialize();
+    motor_deinit(mot);
 }
 
 
 TEST_CASE("Test AacFanMotor run() and stop() methods", "[acfan]"){
-    CTestAacFanMotor motor2{MOTOR_WAVE_FREQ, 100.0f};
-    TEST_ASSERT_EQUAL(AC_ERR_MOTOR_NOT_INITIALIZED, motor2.run());
-    TEST_ASSERT_EQUAL(AC_ERR_MOTOR_NOT_INITIALIZED, motor2.stop());
-    motor2.initialize();
+    TEST_ASSERT_EQUAL(AC_ERR_MOTOR_NOT_INITIALIZED, motor.run());
+    TEST_ASSERT_EQUAL(AC_ERR_MOTOR_NOT_INITIALIZED, motor.stop());
+    motor_init();
 
-    TEST_ASSERT_FALSE(motor2.run());
-    TEST_ASSERT_EQUAL(motor2.getCurrentState(), AC_MOTOR_IS_RUNNING);
-    TEST_ASSERT_FALSE(motor2.stop());
-    TEST_ASSERT_EQUAL(motor2.getCurrentState(), AC_MOTOR_IS_STOPPED);
+    TEST_ASSERT_FALSE(motor.run());
+    TEST_ASSERT_EQUAL(motor.getCurrentState(), AC_MOTOR_IS_RUNNING);
+    TEST_ASSERT_FALSE(motor.stop());
+    TEST_ASSERT_EQUAL(motor.getCurrentState(), AC_MOTOR_IS_STOPPED);
     
-    motor2.deinitialize();
+    motor_deinit();
 }
 
 
 TEST_CASE("Test AacFanMotor setting power 0\% as stop command", "[acfan]"){
-    CTestAacFanMotor motor{MOTOR_WAVE_FREQ, 80.0f};
-    motor.initialize();
+    CTestAacFanMotor mot{MOTOR_WAVE_FREQ, 51.0f};
+    motor_init(mot);
 
-    motor.run();
-    TEST_ASSERT_FALSE(motor.setPower(0.0f));
-    TEST_ASSERT_EQUAL(motor.getCurrentState(), AC_MOTOR_IS_STOPPED);
+    TEST_ASSERT_EQUAL(AC_MOTOR_OK, mot.run());
+    TEST_ASSERT_FALSE(mot.setPowerPercents(0.0f));
+    TEST_ASSERT_EQUAL(mot.getCurrentState(), AC_MOTOR_IS_STOPPED);
     
-    motor.deinitialize();
+    motor_deinit(mot);
 }
 
 #if DISABLED_FOR_TARGETS(linux)
 TEST_CASE("Test CMotorDrive ISR-handler", "[acfan]"){
-    CTestAacFanMotor motor{MOTOR_WAVE_FREQ, 100.0f};
     const unsigned long ISR_CALL_TIMES = 100UL * motor.calcSineBufferLength(MOTOR_WAVE_FREQ);       // Кол-полных ISR-handler кратных размеру массива синусоидных чисел
 
-    TEST_ASSERT_FALSE_MESSAGE(motor.initialize(),"Error: fail Motor initialize.");
+    motor_init();
 
     for (unsigned long i = 0; i < ISR_CALL_TIMES; ++i) {
         
     }
     
-    motor.deinitialize();
+    motor_deinit();
 }
 #endif //!TEMPORARY_DISABLED_FOR_TARGETS(linux)
