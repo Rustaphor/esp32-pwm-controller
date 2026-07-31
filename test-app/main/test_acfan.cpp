@@ -165,7 +165,7 @@ TEST_CASE("Test AacFanMotor setting power 0\% as stop command", "[acfan]"){
 }
 
 #if DISABLED_FOR_TARGETS(linux)
-TEST_CASE("Test CMotorDrive ISR-handler", "[acfan]"){
+TEST_CASE("Test CFanMotor ISR-handler", "[acfan]"){
     const unsigned long ISR_CALL_TIMES = 100UL * motor.calcSineBufferLength(MOTOR_WAVE_FREQ);       // Кол-полных ISR-handler кратных размеру массива синусоидных чисел
 
     motor_init();

@@ -1,15 +1,48 @@
-#include "CMotorCtrl.h"
+#include "CMotCtrlCmd.h"
 #include "argtable3/argtable3.h"
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
 #include "esp_log.h"
 #include "esp_err.h"
+#include "CFanMotor.h"
 
 
+extern CFanMotor fanmot;
 static const char* logTAG = "MotorControl";
 
 using namespace std;
+
+
+void disp_motor_status(void){
+    // TODO: показать текущий статус мотора
+    auto state = fanmot.getCurrentState();
+    const char* c_state;
+    switch (state) {
+        case AC_MOTOR_INITIALIZED:
+            c_state = "initialized";
+            break;
+        case AC_MOTOR_NOT_INITIALIZED:
+            c_state = "not initialized";
+            break;
+        case AC_MOTOR_IS_STOPPED:
+            c_state = "stopped";
+            break;
+        case AC_MOTOR_IS_RUNNING:
+            c_state = "running";
+            break;
+        case AC_MOTOR_IN_FAILURE:
+            c_state = "failure";
+            break;
+        default:
+            c_state = "unknow";
+    }
+    printf("Motor current status:\n\r");
+    printf(" state: %s\n", c_state);
+    printf(" power: %4.2f %% \n", fanmot.getPowerOutPercent());
+    //  printf("\tfreq: %d Hz\n", fanmot.);
+}
+
 
 // Реализация виртуальной функции
 int CMotCtrlCmd::exec_func_cb(int argc, char* argv[]) {
@@ -20,7 +53,8 @@ int CMotCtrlCmd::exec_func_cb(int argc, char* argv[]) {
 
     /* global arg_xxx structs */
     arg_lit_t *pHelp, *pCmdOn, *pCmdOff;
-    arg_int_t *pFreq, *pPwr;
+    arg_int_t *pFreq;
+    arg_dbl_t *pPwr;
     arg_end_t *pEnd;
 
 
@@ -28,8 +62,8 @@ int CMotCtrlCmd::exec_func_cb(int argc, char* argv[]) {
         pHelp   = arg_lit0(NULL, "help", "display this pHelp and exit"),
         pCmdOn  = arg_lit0(NULL, "on", "switch motor on"),
         pCmdOff = arg_lit0(NULL, "off", "switch motor off"),
-        pFreq   = arg_int0("f", "freq", "<n>", "set pwm frequency (30-100) kHz"),
-        pPwr    = arg_int0("p", "power", "<n>", "set output power (0-100) percents"),
+        // pFreq   = arg_int0("f", "freq", "<n>", "set pwm frequency (30-100) kHz"),
+        pPwr    = arg_dbl0("p", "power", "<n>", "set output power (0-100) percents"),
         pEnd    = arg_end(20)
     };
 
@@ -37,30 +71,34 @@ int CMotCtrlCmd::exec_func_cb(int argc, char* argv[]) {
 
     if (pHelp->count > 0)
     {
-        printf("Usage: %s", _command);
+        printf("Usage: %s\n", _command);
         arg_print_syntax(stdout, argtable, "\n");
         arg_print_glossary(stdout, argtable, "  %-25s %s\n");
         goto exit;
     }
 
-    if (pCmdOff->count > 0)
-    {
-        // TODO: включить мотор
-        emptyCmd = false;
-    } else if (pCmdOn->count > 0) {
-        //TODO выключить
-        emptyCmd = false;
-    }
-
-    if (pFreq->count > 0) {
-        // TODO: проверить допустимость значений и изменить частоту ШИМ
-        emptyCmd = false;
-    }
+    // if (pFreq->count > 0) {
+    //     emptyCmd = false;
+    //     // TODO: проверить допустимость значений и изменить частоту ШИМ
+    // }
 
     if (pPwr->count > 0) {
-        // TODO: проверить допустимость значений мощности и изменить мощность
         emptyCmd = false;
+        exitcode = fanmot.setPowerPercents((float) *pPwr->dval);
+        if (exitcode == AC_ERR_MOTOR_INVALID_POWER){
+            printf("Invalid set power value. The value must be in range [0-100]\n");
+            goto exit;
+        }
     }
+
+    if (pCmdOff->count > 0) {
+        emptyCmd = false;
+        exitcode = fanmot.stop();
+    } else if (pCmdOn->count > 0) {
+        emptyCmd = false;
+        exitcode = fanmot.run();
+    }
+    if (exitcode) goto exit;
 
     /* If the parser returned any errors then display them and exit */
     if (nerrors > 0)
@@ -73,12 +111,12 @@ int CMotCtrlCmd::exec_func_cb(int argc, char* argv[]) {
         goto exit_n_help;
     }
 
-    // TODO: Выполнить команду мотора
-    ESP_LOGI(logTAG, "Motor command run [ToDo]!");
+    disp_motor_status();
     goto exit;
 
 exit_n_help:
-    printf("Try '%s --help' for more information.", _command);
+    disp_motor_status();
+    printf("Try '%s --help' for more information.\n", _command);
 
 exit:
     /* deallocate each non-null entry in argtable[] */

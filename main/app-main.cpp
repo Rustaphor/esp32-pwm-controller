@@ -14,15 +14,15 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include "esp_freertos_hooks.h"
-
-#include "esp_log.h"
-#include "CMotorDrive.h"
-#include "CMotorCtrl.h"
+#include "CHwManager.h"
 #include "CUartConsole2.h"
 #include "CInfoCmd.h"
+#include "CMotCtrlCmd.h"
 
+// TODO: begin Потом убрать (только для отладки)
 #include <freertos/semphr.h>
-
+#include "esp_log.h"
+// end todo
 
 static const char* TAG = __FILE_NAME__;       // Локальный тег логирования модуля
 
@@ -36,7 +36,6 @@ using namespace std::chrono;
  
  const auto sleep_time = seconds{10};
 
-CMotorDrive motor;
 
  void vMyTimer_callback(TimerHandle_t xTimer)
  {
@@ -46,7 +45,12 @@ CMotorDrive motor;
     // motor.test_pwm(pwmval);
  }
 
+ // TODO: begin Потом убрать (только для отладки)
 
+ // end todo
+
+
+CHwManager hwm;
 CUartConsole2 console2;
 
 
@@ -119,6 +123,17 @@ void vApplicationIdleHook(void) {
 //     return cfg;
 // }
 
+/*
+* Блок инициализации и отладочной консоли
+*/
+void init_debug_console(void){
+    console2.initialize();
+    static CInfoCmd infoCmd;
+    static CMotCtrlCmd mCtrl;
+    console2.registerCommand(infoCmd);
+    console2.registerCommand(mCtrl);
+}
+
 
 extern "C" [[noreturn]] void app_main(void)
 {
@@ -126,19 +141,10 @@ extern "C" [[noreturn]] void app_main(void)
     /*
     * Блок первичных инициализаций
     */
-    motor.initialize();
+    hwm.initAll();
     this_thread::sleep_for(milliseconds{200});
-    motor.run();
 
-    /*
-    * Блок инициализации и отладочной консоли
-    */
-    console2.initialize();
-    CInfoCmd infoCmd;
-    CMotCtrlCmd mCtrl;
-    console2.registerCommand(infoCmd);
-    console2.registerCommand(mCtrl);
-    
+    init_debug_console();
   
     // wifi_initialize(WIFI_MODE_APSTA);
     
