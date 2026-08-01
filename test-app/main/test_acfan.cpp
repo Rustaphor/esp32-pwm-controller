@@ -3,10 +3,10 @@
 #include "CTestAacFanMotor.h"
 #include <utility>
 #include <iostream>
+#include <stdio.h>
 #include "helpfuns.h"
 #include <inttypes.h>
-
-
+#include <memory>
 
 using namespace std;
 
@@ -30,9 +30,10 @@ void motor_deinit(CTestAacFanMotor &mot = motor){
 TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-90 degs", "[acfan]")
 {
     // Условия теста
-    const float MaxAngle = ACMOTOR_SINE_MAX_ANGLE;  // Maximum Degrees
-    const acmot_sineval_t MaxValue = 8000U;           // Амплитуда квантования
-    const float relTolerance = 2.0f;                // Точность расхождения в процентах
+    const float MaxAngle = ACMOTOR_SINE_MAX_ANGLE;           // Maximum Degrees
+    const acmot_sineval_t MaxValue = ACMOTOR_SINE_MAX_VALUE; // Масимальное число счетчика ШИМ
+    const acmot_sineval_t Amplitude = MaxValue;              // Амплитуда квантования
+    const float relTolerance = 2.0f;                         // Точность расхождения в процентах
 
     CTestAacFanMotor mot{ACMOTOR_SINE_MIN_FREQ, 100.0f};
     motor_init(mot);
@@ -40,36 +41,33 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-90 degs", "[acfan]
     const acmot_sineval_t Offset = mot.calcSineBufferLength(ACMOTOR_SINE_MIN_FREQ);
     
     // Создание тестового буфера и заполнение его синусом
-    acmot_sineval_t* p1 = new acmot_sineval_t[Offset];
-    pair<acmot_sineval_t*, const acmot_sineval_t*> expectBuff{p1, p1 + Offset};
+    shared_ptr<acmot_sineval_t[]> pBuff { make_shared<acmot_sineval_t[]>(Offset) };    // массив из n элементов, равных 0
+    pair<acmot_sineval_t*, const acmot_sineval_t*> expBuff{pBuff.get(), pBuff.get() + Offset};
     const float dAlpha = M_PI/180.0f * MaxAngle/Offset;     // Дискретный угол (радианы)
-    float Alpha = 0.0f;                                     // Начальный угол (радианы)
+    float Alpha = 0.0f;                                     // Начальный угол (радианы) или M_PI/6.0f
     for (int i = 0; i < Offset; ++i, Alpha += dAlpha) {
-        expectBuff.first[i] = sinf(Alpha) * MaxValue;
+        expBuff.first[i] = MaxValue/2 + Amplitude*(sinf(Alpha) - 0.5);
     }
 
     // Заполнение его синусом тестируемого объекта
     mot.test_fillSineBuffer(MaxValue, MaxAngle);
 
     // Сравнение результатов
-    bool matched = false;
     for (int i = 0; i < Offset; ++i) {
-        matched = check2ValuesByTolerance(expectBuff.first[i], mot.get_SineBuffer().first[i], relTolerance);
-        if (!matched) break;
+        TEST_ASSERT_TRUE(checkValuesByTolPercents(expBuff.first[i], mot.get_SineBuffer().first[i], relTolerance));
     }
 
     motor_deinit(mot);
-    delete[] p1;
-    TEST_ASSERT_TRUE(matched);
 }
 
 
 TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-180 degs", "[acfan]")
 {
     // Условия теста
-    const float MaxAngle = 180.0f;                  // Maximum Degrees
-    const acmot_sineval_t MaxValue = 7890U;           // Амплитуда квантования
-    const float relTolerance = 6.5f;                // Точность расхождения в процентах (в библиетеке IQmath набегающая погрешность)
+    const float MaxAngle = 180.0f;                            // Maximum Degrees
+    const acmot_sineval_t MaxValue = ACMOTOR_SINE_MAX_VALUE;  // Амплитуда квантования
+    const acmot_sineval_t Amplitude = MaxValue;              // Амплитуда квантования
+    const acmot_sineval_t max_error_tol = 5;                          // Точность расхождения в процентах (в библиетеке IQmath набегающая погрешность)
     const acmot_sinefreq_t MOTOR_SINE_FREQ = MOTOR_WAVE_FREQ;
 
     CTestAacFanMotor mot{MOTOR_SINE_FREQ, 100.0f};
@@ -78,12 +76,12 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-180 degs", "[acfan
     const acmot_sineval_t Offset = mot.calcSineBufferLength(MOTOR_SINE_FREQ);
     
     // Создание тестового буфера и заполнение его синусом
-    acmot_sineval_t* p1 = new acmot_sineval_t[Offset];
-    pair<acmot_sineval_t*, const acmot_sineval_t*> expectBuff{p1, p1 + Offset};
+    shared_ptr<acmot_sineval_t[]> pBuff { make_shared<acmot_sineval_t[]>(Offset) };    // массив из n элементов, равных 0
+    pair<acmot_sineval_t*, const acmot_sineval_t*> expBuff{pBuff.get(), pBuff.get() + Offset};
     const float dAlpha = M_PI/180.0f * MaxAngle/Offset;     // Дискретный угол (радианы)
     float Alpha = 0.0f;                                     // Начальный угол (радианы)
     for (int i = 0; i < Offset; ++i, Alpha += dAlpha) {
-        expectBuff.first[i] = sinf(Alpha) * MaxValue;
+        expBuff.first[i] = MaxValue/2 + Amplitude*(sinf(Alpha) - 0.5);
     }
 
 #if DISABLED_FOR_TARGETS(linux)
@@ -98,15 +96,12 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-180 degs", "[acfan
 #endif
 
     // Сравнение результатов
-    bool matched = false;
     for (int i = 0; i < Offset; ++i) {
-        matched = check2ValuesByTolerance(expectBuff.first[i], mot.get_SineBuffer().first[i], relTolerance);
-        if (!matched) break;
+        TEST_ASSERT_TRUE(check2ValuesByDelta(expBuff.first[i], mot.get_SineBuffer().first[i], max_error_tol));
+        printf("Expect: %d\tGot: %d\t Matched: %d\n", expBuff.first[i], mot.get_SineBuffer().first[i], check2ValuesByDelta(expBuff.first[i], mot.get_SineBuffer().first[i], max_error_tol));
     }
 
     motor_deinit(mot);
-    delete[] p1;
-    TEST_ASSERT_TRUE(matched);
 }
 
 
@@ -119,7 +114,7 @@ TEST_CASE("Test AacFanMotor setting Output Power Percents", "[acfan]"){
         TEST_ASSERT_FALSE(motor.setPowerPercents(cur_val));
         a = motor.getPowerOutPercent();
         b = cur_val;
-        TEST_ASSERT_TRUE(check2ValuesByTolerance(a, b, 0.30f));
+        TEST_ASSERT_TRUE(checkValuesByTolPercents(a, b, 0.30f));
         }
     
     motor_deinit();

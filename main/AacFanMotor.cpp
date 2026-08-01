@@ -210,14 +210,15 @@ size_t AacFanMotor::fill_SineWaveBuffer(pair<const acmot_sineval_t *, const acmo
 {
     size_t length = hBuff.second - hBuff.first;
 
-    constexpr const _iq rad = _IQ(M_PI / 180.0f);
-    _iq dAngleRad = _IQmpy(_IQ(max_angle/length), rad);             // Convert dAlpha angle to dAlphaRad (radians)
-    _iq CurAngleRad = 0, dcMaxVal = _IQ(max_value), val;
+    const _iq PwmMaxValue = _IQ(max_value);                                        // Амплитудное значение мощности
+    constexpr const _iq HalfAmpl = _IQ(ACMOTOR_SINE_MAX_VALUE) / 2;
+    _iq dAngleRad = _IQmpy(_IQ(max_angle/length), _IQ(M_PI/180.0f));              // Convert dAlpha angle to dAlphaRad (radians)
+    _iq CurAngleRad = 0, val;
  
     acmot_sineval_t* pCurrent = const_cast<acmot_sineval_t*>(hBuff.first);             // Set pointer to start of buffer
-
     while (pCurrent < hBuff.second) {
-        val = _IQmpy(_IQsin(CurAngleRad), dcMaxVal);
+        // val = _IQmpy(_IQsin(CurAngleRad), dcMaxVal);
+        val = HalfAmpl + _IQmpy(_IQsin(CurAngleRad) - _IQ(0.5f), PwmMaxValue);
         *pCurrent = (acmot_sineval_t) _IQtoF(val);
         CurAngleRad += dAngleRad;
         pCurrent++;
