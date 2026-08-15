@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026
 #pragma once
-#include "acmotor_defs.h"
+#include "CSineBuffHelper.h"
 #include "IDevice.h"
 #include <optional>
 #include <utility>
@@ -106,6 +106,8 @@ public:
 
 protected:
 
+    binary_semaphore sem{1};
+
     /**
     * @brief Первичная инициалиация оборудования для упраления мотором
     * @details Метод вызывается из метода initialize()
@@ -146,7 +148,6 @@ protected:
     __always_inline
     const pair<const acmot_sineval_t*, const acmot_sineval_t*>& getCurrentSineBuffer() noexcept { return _hSineWaveBuffer; }
 
-    mutable binary_semaphore sem{1};
 
 private:
 
