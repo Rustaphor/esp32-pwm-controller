@@ -2,6 +2,7 @@
 // Copyright (c) 2026
 #pragma once
 #include "acmotor_defs.h"
+#include "IDevice.h"
 #include <optional>
 #include <utility>
 #include <semaphore>
@@ -18,6 +19,13 @@ typedef enum {
     AC_MOTOR_NOT_INITIALIZED
 } AcMotorState;
 
+typedef union {
+    enum {
+        AC_MOTOR_IS_STOPPED = 1,
+        AC_MOTOR_IS_RUNNING,
+    } state;
+    devState_t sys_state;
+} acMotState_t;
 
 using namespace std;
 
@@ -25,7 +33,7 @@ using namespace std;
 /**
 * @brief Абстрактрый класс управления мотором переменного тока с фазосдвигающим конденсатором для вентиллятора
 */
-class AacFanMotor {
+class AacFanMotor : public IDevice {
 
 public:
 
@@ -42,19 +50,21 @@ public:
         }
     }
 
+    int getState2() const { return DEVICE_IN_FAILURE; };
+
     /**
     * @brief Первичная инициалиация оборудования для упраления мотором
     * @details Используется обычно при первичной инициализации и восстановлении энергопотребления. После выделения памяти вызывает метод hw_init()
     * @retval AC_MOTOR_OK - успех, иначе код ошибки
     */
-    acmot_err_t initialize();
+    acmot_err_t initialize() override;
 
     /**
     * @brief Деинициализация мотора, например, при переходе в спящий режим
     * @details Используется обычно при переходе в спязий режим. Метод должен быть помещен в десткуртор финального класса.
     * @retval AC_MOTOR_OK - успех, иначе код ошибки
     */
-    acmot_err_t deinitialize();
+    acmot_err_t deinitialize() override;
   
     /**
      * @brief Запуск мотора с прежней (ранее установленной) мощностью
@@ -163,9 +173,6 @@ private:
 
     acmot_sineval_t _setPowerOutImmediatelyLL(acmot_sineval_t powerOut) noexcept;
     acmot_err_t _run(acmot_sineval_t powerOut);
-
-    _GLIBCXX_NODISCARD
-    optional<const acmot_sineval_t*> _reAllocSineWaveBuffer(pair<const acmot_sineval_t*, const acmot_sineval_t*>& hArray, size_t buff_length) noexcept;
 
     acmot_sinefreq_t _currentSineFreq;
     acmot_sineval_t _currentAmplitude;

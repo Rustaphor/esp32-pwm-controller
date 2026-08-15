@@ -53,7 +53,6 @@ int CMotCtrlCmd::exec_func_cb(int argc, char* argv[]) {
 
     /* global arg_xxx structs */
     arg_lit_t *pHelp, *pCmdOn, *pCmdOff;
-    arg_int_t *pFreq;
     arg_dbl_t *pPwr;
     arg_end_t *pEnd;
 
@@ -76,11 +75,6 @@ int CMotCtrlCmd::exec_func_cb(int argc, char* argv[]) {
         arg_print_glossary(stdout, argtable, "  %-25s %s\n");
         goto exit;
     }
-
-    // if (pFreq->count > 0) {
-    //     emptyCmd = false;
-    //     // TODO: проверить допустимость значений и изменить частоту ШИМ
-    // }
 
     if (pPwr->count > 0) {
         emptyCmd = false;

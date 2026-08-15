@@ -2,10 +2,10 @@
 #define IDEVICE_H
 
 typedef enum {
-    DEVICE_IN_FAILURE = 1,
-    DEVICE_IS_BUSY,
+    DEVICE_NOT_INITIALIZED = 0,
     DEVICE_INITIALIZED,
-    DEVICE_NOT_INITIALIZED
+    DEVICE_IN_FAILURE,
+    DEVICE_IS_BUSY,
 } devState_t;
 
 
@@ -22,7 +22,7 @@ class IDevice {
 public:
     virtual ~IDevice() = default;
 
-    virtual const char* getName() = 0;
+    virtual int getState2() const = 0;
 
     // Метод для инициализации конкретного устройства
     virtual int initialize() = 0;

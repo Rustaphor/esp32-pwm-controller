@@ -135,7 +135,7 @@ acmot_err_t AacFanMotor::initialize()
     sem.acquire();
     acmot_err_t result;
 
-    optional<const acmot_sineval_t*> op1, op2;
+    optional<const acmot_sineval_t*> op1;
     uint16_t sine_array_len = calcSineBufferLength(_currentSineFreq);
     op1 = _allocWaveBuffer(_hSineWaveMinFreqBuff, sine_array_len);
     if (!op1.has_value()) {
@@ -199,26 +199,19 @@ acmot_sineval_t AacFanMotor::_setPowerOutImmediatelyLL(acmot_sineval_t powerOut)
     return powerOut;
 }
 
-optional<const acmot_sineval_t *> AacFanMotor::_reAllocSineWaveBuffer(pair<const acmot_sineval_t *, const acmot_sineval_t *> &hArray, size_t buff_length) noexcept
-{
-    hArray.first = (acmot_sineval_t*) realloc((void*) hArray.first, buff_length * sizeof(acmot_sineval_t));
-    hArray.second = hArray.first + buff_length;
-    return hArray.first;
-}
-
 size_t AacFanMotor::fill_SineWaveBuffer(pair<const acmot_sineval_t *, const acmot_sineval_t *> &hBuff, acmot_sineval_t max_value, float max_angle) noexcept
 {
     size_t length = hBuff.second - hBuff.first;
 
     const _iq PwmMaxValue = _IQ(max_value);                                        // Амплитудное значение мощности
-    constexpr const _iq HalfAmpl = _IQ(ACMOTOR_SINE_MAX_VALUE) / 2;
+    constexpr const _iq offset = _IQ(ACMOTOR_SINE_MAX_VALUE) / 2;
     _iq dAngleRad = _IQmpy(_IQ(max_angle/length), _IQ(M_PI/180.0f));              // Convert dAlpha angle to dAlphaRad (radians)
     _iq CurAngleRad = 0, val;
  
     acmot_sineval_t* pCurrent = const_cast<acmot_sineval_t*>(hBuff.first);             // Set pointer to start of buffer
     while (pCurrent < hBuff.second) {
         // val = _IQmpy(_IQsin(CurAngleRad), dcMaxVal);
-        val = HalfAmpl + _IQmpy(_IQsin(CurAngleRad) - _IQ(0.5f), PwmMaxValue);
+        val = offset + _IQmpy(_IQsin(CurAngleRad) - _IQ(0.5f), PwmMaxValue);
         *pCurrent = (acmot_sineval_t) _IQtoF(val);
         CurAngleRad += dAngleRad;
         pCurrent++;

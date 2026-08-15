@@ -133,7 +133,6 @@ acmot_err_t CFanMotor::hw_init()
     gen_config.gen_gpio_num = MOTOR_PWM_LS_PIN;
     result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_new_generator(hOperator_, &gen_config, &hGenerator_[1]));
     if (result) goto exit_error_init;
-
     result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_actions_on_compare_event(hGenerator_[0],
                                                                  MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, hComparator_, MCPWM_GEN_ACTION_LOW),
                                                                  MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, hComparator_, MCPWM_GEN_ACTION_HIGH),
