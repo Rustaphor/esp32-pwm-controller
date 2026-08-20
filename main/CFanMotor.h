@@ -17,7 +17,7 @@
 #include "AacFanMotor.h"
 
 #define MOTOR_DRV_EN_PIN        GPIO_NUM_16
-#define MOTOR_DRV_FAULT_PIN     10
+// #define MOTOR_DRV_FAULT_PIN     GPIO_NUM_17
 #define MOTOR_PWM_HS_PIN        GPIO_NUM_21
 #define MOTOR_PWM_LS_PIN        GPIO_NUM_22
 
@@ -50,8 +50,6 @@ public:
     ~CFanMotor() {
         hw_deinit();
     }
-
-    void test_pwm(acmot_sineval_t pwm_value);
 
     // Убираем копируемые операции, если менеджеры не должны дублироваться
     CFanMotor(const CFanMotor&) = delete;

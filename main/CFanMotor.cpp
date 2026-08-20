@@ -41,11 +41,6 @@ bool IRAM_ATTR pwmtimer_onupdate_isr_cb(mcpwm_timer_handle_t timer, const mcpwm_
     return task_yield;
 }
 
-void CFanMotor::test_pwm(acmot_sineval_t pwm_value)
-{
-    mcpwm_comparator_set_compare_value(hComparator_, pwm_value);
-}
-
 acmot_err_t CFanMotor::hw_init()
 {
     esp_err_t result;
@@ -94,10 +89,7 @@ acmot_err_t CFanMotor::hw_init()
         .flags{ .update_cmp_on_tez = true }
     };
 
-    mcpwm_generator_config_t gen_config = {
-        .gen_gpio_num = MOTOR_PWM_HS_PIN
-    };
-    
+    mcpwm_generator_config_t gen_config = {};
 
     ESP_LOGD(tag, "Create MCPWM operator");
     result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_new_timer(&timer_config, &hTimer_));
@@ -128,24 +120,28 @@ acmot_err_t CFanMotor::hw_init()
 #endif
 
     ESP_LOGD(tag, "Create PWM generator(s)");
+    gen_config.gen_gpio_num = MOTOR_PWM_HS_PIN;
     result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_new_generator(hOperator_, &gen_config, &hGenerator_[0]));
     if (result) goto exit_error_init;
     gen_config.gen_gpio_num = MOTOR_PWM_LS_PIN;
     result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_new_generator(hOperator_, &gen_config, &hGenerator_[1]));
     if (result) goto exit_error_init;
+
     result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_actions_on_compare_event(hGenerator_[0],
-                                                                 MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, hComparator_, MCPWM_GEN_ACTION_LOW),
-                                                                 MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, hComparator_, MCPWM_GEN_ACTION_HIGH),
-                                                                 MCPWM_GEN_COMPARE_EVENT_ACTION_END()));
+                                            MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, hComparator_, MCPWM_GEN_ACTION_LOW),
+                                            MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, hComparator_, MCPWM_GEN_ACTION_HIGH),
+                                            MCPWM_GEN_COMPARE_EVENT_ACTION_END()));
     if (result) goto exit_error_init;
-    result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_actions_on_compare_event(hGenerator_[1],
-                                                                 MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, hComparator_, MCPWM_GEN_ACTION_HIGH),
-                                                                 MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, hComparator_, MCPWM_GEN_ACTION_LOW),
-                                                                 MCPWM_GEN_COMPARE_EVENT_ACTION_END()));
+    // result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_actions_on_compare_event(hGenerator_[1],
+    //                                         MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, hComparator_, MCPWM_GEN_ACTION_HIGH),
+    //                                         MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, hComparator_, MCPWM_GEN_ACTION_LOW),
+    //                                         MCPWM_GEN_COMPARE_EVENT_ACTION_END()));
+    // if (result) goto exit_error_init;
+    // Debugging begin
+    result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_action_on_timer_event(hGenerator_[1],
+                                    MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_FULL, MCPWM_GEN_ACTION_TOGGLE)));
     if (result) goto exit_error_init;
-
-    mcpwm_comparator_set_compare_value(hComparator_, 128);
-
+    // Debuggin end
 
     // Регистрация обработчика прерывания таймера
     ESP_LOGD(tag, "Register MCPWM Timer callback(s)");
