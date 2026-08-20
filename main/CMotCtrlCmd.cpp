@@ -9,7 +9,7 @@
 
 
 extern CFanMotor fanmot;
-static const char* logTAG = "MotorControl";
+static const char* logTAG = "MotorCmdCtrl";
 
 using namespace std;
 
@@ -20,7 +20,6 @@ void disp_motor_status(void){
     const char* c_state;
     if (state.sysState == DEV_INITIALIZED) {
         c_state = "initialized";
-        goto do_print;
     } else if(state.sysState==DEV_NOT_INITIALIZED){
         c_state = "not initialized";
         goto do_print;

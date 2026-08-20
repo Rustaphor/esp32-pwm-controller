@@ -21,20 +21,20 @@ bool IRAM_ATTR pwmtimer_onupdate_isr_cb(mcpwm_timer_handle_t timer, const mcpwm_
     // Назначение DC значения ШИМ
 
     // Высокоуровневый более медленный вариант изменений компаратора
-    // mcpwm_comparator_set_compare_value(pMotor->hComparator_, *pMotor->_pCurSineVal);
+    // mcpwm_comparator_set_compare_value(pMotor->hComparator_, *pMotor->_pCurVal);
     mcpwm_ll_operator_set_compare_value(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), 
         pMotor->hComparator_->oper->oper_id,
         pMotor->hComparator_->cmpr_id,
-        *pMotor->_pCurSineVal);
+        *pMotor->_pCurVal);
 
-    pMotor->_pCurSineVal += inc_dec;
+    pMotor->_pCurVal += inc_dec;
 
-    if (pMotor->_pCurSineVal >= pMotor->getCurrentSineBuffer().second) {
+    if (pMotor->_pCurVal >= pMotor->getCurrentSineBuffer().second) {
         inc_dec = -1;
-        pMotor->_pCurSineVal = const_cast<acmot_sineval_t*>(pMotor->getCurrentSineBuffer().second) - 1;
-    } else if (pMotor->_pCurSineVal < pMotor->getCurrentSineBuffer().first) {
+        pMotor->_pCurVal = const_cast<acmot_sineval_t*>(pMotor->getCurrentSineBuffer().second) - 1;
+    } else if (pMotor->_pCurVal < pMotor->getCurrentSineBuffer().first) {
         inc_dec = 1;
-        pMotor->_pCurSineVal = const_cast<acmot_sineval_t*>(pMotor->getCurrentSineBuffer().first);
+        pMotor->_pCurVal = const_cast<acmot_sineval_t*>(pMotor->getCurrentSineBuffer().first);
         xSemaphoreGiveFromISR(pMotor->hxSem, &task_yield);
     }
 
@@ -152,16 +152,16 @@ acmot_err_t CFanMotor::hw_init()
     result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_timer_register_event_callbacks(hTimer_, &cbs, this));
     if (result) goto exit_error_init;
 
-    _pCurSineVal = const_cast<acmot_sineval_t*>(getCurrentSineBuffer().first); // Reset pointer
+    _pCurVal = const_cast<acmot_sineval_t*>(getCurrentSineBuffer().first); // Reset pointer
     hxSemMot = xSemaphoreCreateMutexStatic(&hxSemMotBuff);
 
     ESP_LOGI(tag,"Motor driver initialize passed!");
 
-    return AC_MOTOR_OK;
+    return DEVICE_OK;
 
 exit_error_init:
     ESP_LOGE(tag,"Error #%d mcpwm-driver fail initialize", result);
-    return AC_ERR_MOTOR_INIT_FALURE;
+    return DEVICE_INIT_FALURE;
 }
 
 acmot_err_t CFanMotor::hw_deinit()
@@ -188,7 +188,7 @@ acmot_err_t CFanMotor::hw_deinit()
 
     ESP_LOGD(tag,"Hardware de-initialized");
     vSemaphoreDelete(hxSemMot);
-    return AC_MOTOR_OK;
+    return DEVICE_OK;
 
 err_hwinit:
     // TODO: добавить статус/действие критической ошибки переинициализации
@@ -198,7 +198,7 @@ err_hwinit:
 
 size_t CFanMotor::calcSineBufferLength(acmot_sinefreq_t sine_wave_freq) noexcept
 {
-    _pCurSineVal = const_cast<acmot_sineval_t*>(getCurrentSineBuffer().first); // Reset pointer
+    _pCurVal = const_cast<acmot_sineval_t*>(getCurrentSineBuffer().first); // Reset pointer
     return (MOTOR_MCPWM_TIMER_RESOLUTION_HZ/(MOTOR_MCPWM_PERIOD * 4)) / sine_wave_freq;
 }
 
@@ -218,7 +218,7 @@ acmot_err_t CFanMotor::hw_run(const acmot_sineval_t powerOut)
     }
 
     ESP_LOGI(tag, "Motor driver started.");
-    _pCurSineVal = const_cast<acmot_sineval_t*>(getCurrentSineBuffer().first);  // Reset pointer
+    _pCurVal = const_cast<acmot_sineval_t*>(getCurrentSineBuffer().first);  // Reset pointer
     return result;
 }
 
@@ -238,12 +238,12 @@ acmot_err_t CFanMotor::hw_stop()
     }
 
     ESP_LOGI(tag, "Motor driver stopped.");
-    return AC_MOTOR_OK;
+    return DEVICE_OK;
 }
 
 acmot_err_t CFanMotor::hw_set_enabled(bool en)
 {
-    acmot_err_t result = AC_MOTOR_OK;
+    acmot_err_t result = DEVICE_OK;
 #ifdef MOTOR_DRV_EN_PIN
     result = gpio_set_level(MOTOR_DRV_EN_PIN, en);
     ESP_LOGI(tag, "Mosfet gate driver is %s", en ? "Enable" : "Disable");

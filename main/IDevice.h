@@ -17,7 +17,7 @@ typedef struct {
 
 // Define error codes
 #define DEVICE_OK                       0
-#define DEVICE_FAIL                     0x101
+#define DEVICE_IN_FAILURE               0x101
 #define DEVICE_INIT_FALURE              0x102
 #define DEVICE_NOT_INITIALIZED          0x103
 #define DEVICE_IS_BUSY_NOW              0x104

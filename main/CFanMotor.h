@@ -67,7 +67,7 @@ protected:
 
 private:
 
-    volatile acmot_sineval_t* _pCurSineVal = nullptr;
+    volatile acmot_sineval_t* _pCurVal = nullptr;
     int _direction;
     mcpwm_timer_handle_t hTimer_;
     mcpwm_oper_handle_t hOperator_;

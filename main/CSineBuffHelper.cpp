@@ -10,6 +10,8 @@
 float CSineBuffHelper::amplitude2Percents(acmot_sineval_t amplitude) noexcept
 {
     _iq iampl;
+    if(amplitude < _MIN_PWM_VALUE) amplitude = _MIN_PWM_VALUE;
+    else if (amplitude >_MAX_PWM_VALUE) amplitude -= _MIN_PWM_VALUE;
     const _iq mp = _IQdiv(_IQ(100.0f),_IQ(_MAX_PWM_VALUE));
     iampl = _IQmpy(_IQ(amplitude), mp);
     return _IQtoF(iampl);
@@ -24,21 +26,24 @@ _GLIBCXX_NODISCARD acmot_sineval_t CSineBuffHelper::percents2Amplitude(float prc
 
 size_t CSineBuffHelper::fill_buffer(acmot_sineval_t amplitude) noexcept
 {
-    size_t length = _hBuff.second - _hBuff.first;
+    size_t buff_len = _hBuff.second - _hBuff.first;
+    if (amplitude > _MAX_PWM_VALUE) amplitude = _MAX_PWM_VALUE;                     // limit to max pwm value
 
-    const _iq PwmMaxValue = _IQ(amplitude);                                        // Амплитудное значение мощности
-    const _iq offset = _IQ(_MAX_PWM_VALUE / 2);
-    _iq dAngleRad = _IQmpy(_IQ(_max_angle/length), _IQ(M_PI/180.0f));              // Convert dAlpha angle to dAlphaRad (radians)
+    const _iq offset = _IQ(_MIN_PWM_VALUE);
+    const _iq MaxVal = _IQ(amplitude) - offset;                                 // Амплитудное значение мощности
+    _iq dAngleRad = _IQmpy(_IQ(_max_angle/buff_len), _IQ(M_PI/180.0f));              // Convert dAlpha angle to dAlphaRad (radians)
     _iq CurAngleRad = 0, val;
+    int t2v;
  
-    acmot_sineval_t* pCurrent = const_cast<acmot_sineval_t*>(_hBuff.first);             // Set pointer to start of buffer
+    acmot_sineval_t* pCurrent = const_cast<acmot_sineval_t*>(_hBuff.first);        // Set pointer to start of buffer
     while (pCurrent < _hBuff.second) {
-        // val = _IQmpy(_IQsin(CurAngleRad), dcMaxVal);
-        val = offset + _IQmpy(_IQsin(CurAngleRad) - _IQ(0.5f), PwmMaxValue);
-        *pCurrent = (acmot_sineval_t) _IQint(val);
+        val = offset + _IQmpy(_IQsin(CurAngleRad), MaxVal);
+        t2v = _IQint(val);
+        if (t2v < 0) t2v = 0;  // Values must be only posivive
+        *pCurrent = (acmot_sineval_t) t2v;
         CurAngleRad += dAngleRad;
         pCurrent++;
     }
 
-    return length;
+    return buff_len;
 }

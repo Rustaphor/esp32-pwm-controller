@@ -17,6 +17,7 @@ class CSineBuffHelper final {
     acmot_sinefreq_t _sine_wave_freq;
     float _max_angle;
     acmot_sineval_t _MAX_PWM_VALUE;
+    acmot_sineval_t _MIN_PWM_VALUE;
 
 public:
 
@@ -27,11 +28,12 @@ public:
      * @param max_angle Максимальный расчетный угол фазы от 0 до данного значения.
      * @param max_pwm_value Максимальное аппаратное значение ШИМ.
      */
-    CSineBuffHelper(pair<const acmot_sineval_t*, const acmot_sineval_t*>& hBuff, acmot_sinefreq_t freq, float max_angle, acmot_sineval_t max_pwm_value) :
+    CSineBuffHelper(pair<const acmot_sineval_t*, const acmot_sineval_t*>& hBuff, acmot_sinefreq_t freq, float max_angle, acmot_sineval_t max_pwm_value, acmot_sineval_t min_pwm_value) :
         _hBuff{hBuff},
         _sine_wave_freq{freq},
         _max_angle{max_angle},
-        _MAX_PWM_VALUE{max_pwm_value} {};
+        _MAX_PWM_VALUE{max_pwm_value},
+        _MIN_PWM_VALUE{min_pwm_value} {};
 
     /**
      * @brief Устанавливает ссылку на буфер синусоидального сигнала.
