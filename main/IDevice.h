@@ -1,13 +1,19 @@
 #ifndef IDEVICE_H
 #define IDEVICE_H
 
-typedef enum {
-    DEVICE_NOT_INITIALIZED = 0,
-    DEVICE_INITIALIZED,
-    DEVICE_IN_FAILURE,
-    DEVICE_IS_BUSY,
-} devState_t;
+enum devSysState {
+    DEV_NOT_INITIALIZED = 0,
+    DEV_INITIALIZED,
+    DEV_FAILURE,
+    DEV_BUSY
+};
 
+typedef unsigned char dev_state_reserved_t;
+
+typedef struct {
+   enum devSysState sysState:3;
+   dev_state_reserved_t reserved:5;
+} devState_t;
 
 // Define error codes
 #define DEVICE_OK                       0
@@ -22,7 +28,7 @@ class IDevice {
 public:
     virtual ~IDevice() = default;
 
-    virtual int getState2() const = 0;
+    virtual devState_t getCurrentState() = 0;
 
     // Метод для инициализации конкретного устройства
     virtual int initialize() = 0;

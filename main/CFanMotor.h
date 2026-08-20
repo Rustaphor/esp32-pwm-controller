@@ -6,14 +6,13 @@
 #include "driver/gpio.h"
 #include "driver/mcpwm_prelude.h"
 #include "freertos/FreeRTOS.h"
-#include "IDevice.h"
 
 /*
  * Настройка регистров MCPWM для управления мотором подробно описана в Chapter 29 в ESP32 Technical Reference Manual
 */
 #define MOTOR_MCPWM_TIMER_RESOLUTION_HZ 80000000     // 80MHz Частота выходе первого делителя главного тактового генератора
 #define MOTOR_MCPWM_PERIOD              942          // 84.925KHz (диапазон значений ШИМ DC 0-100%: 0...MOTOR_MCPWM_PERIOD/2)
-#define MOTOR_SINE_WAVE_AMPLITUDE       (MOTOR_MCPWM_PERIOD/2)
+#define ACMOTOR_SINE_MAX_VALUE          (MOTOR_MCPWM_PERIOD/2)
 #define MOTOR_WAVE_FREQ                 50           // 50Hz Single phase AC
 #include "AacFanMotor.h"
 
@@ -45,7 +44,7 @@ public:
     SemaphoreHandle_t hxSem = xSemaphoreCreateCounting(1, 0);
 
     // Constructors
-    CFanMotor() : AacFanMotor{MOTOR_WAVE_FREQ, 100.0f}, _direction{1}, hTimer_{NULL} {};
+    CFanMotor() : AacFanMotor{MOTOR_WAVE_FREQ, 0.0f}, _direction{1}, hTimer_{NULL} {};
 
     // Destructor
     ~CFanMotor() {
@@ -63,7 +62,7 @@ protected:
     acmot_err_t hw_deinit() override;
     size_t calcSineBufferLength(acmot_sinefreq_t sine_wave_freq) noexcept override;
     acmot_err_t hw_run(const acmot_sineval_t powerOut) override;
-    acmot_err_t hw_stop() override;
+    acmot_err_t hw_stop() noexcept override;
     acmot_err_t hw_set_enabled(bool en);
 
 private:

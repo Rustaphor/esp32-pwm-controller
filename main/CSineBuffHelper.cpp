@@ -22,7 +22,7 @@ _GLIBCXX_NODISCARD acmot_sineval_t CSineBuffHelper::percents2Amplitude(float prc
     return (acmot_sineval_t) _IQint(amp);
 }
 
-size_t CSineBuffHelper::fillSineWaveValues(acmot_sineval_t amplitude) noexcept
+size_t CSineBuffHelper::fill_buffer(acmot_sineval_t amplitude) noexcept
 {
     size_t length = _hBuff.second - _hBuff.first;
 

@@ -18,13 +18,15 @@ void disp_motor_status(void){
     // TODO: показать текущий статус мотора
     auto state = fanmot.getCurrentState();
     const char* c_state;
-    switch (state) {
-        case AC_MOTOR_INITIALIZED:
-            c_state = "initialized";
-            break;
-        case AC_MOTOR_NOT_INITIALIZED:
-            c_state = "not initialized";
-            break;
+    if (state.sysState == DEV_INITIALIZED) {
+        c_state = "initialized";
+        goto do_print;
+    } else if(state.sysState==DEV_NOT_INITIALIZED){
+        c_state = "not initialized";
+        goto do_print;
+    }
+
+    switch ((AcMotorState_t) state.reserved) {
         case AC_MOTOR_IS_STOPPED:
             c_state = "stopped";
             break;
@@ -37,6 +39,8 @@ void disp_motor_status(void){
         default:
             c_state = "unknow";
     }
+
+do_print:
     printf("Motor current status:\n\r");
     printf(" state: %s\n", c_state);
     printf(" power: %4.2f %% \n", fanmot.getPowerOutPercent());
