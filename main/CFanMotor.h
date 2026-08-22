@@ -12,20 +12,21 @@
 */
 #define MOTOR_MCPWM_TIMER_RESOLUTION_HZ 80000000     // 80MHz Частота выходе первого делителя главного тактового генератора
 #define MOTOR_MCPWM_PERIOD              942          // 84.925KHz (диапазон значений ШИМ DC 0-100%: 0...MOTOR_MCPWM_PERIOD/2)
-#define ACMOTOR_SINE_MAX_VALUE          (MOTOR_MCPWM_PERIOD/2)
+#define ACMOT_SINE_MAX_VALUE            (MOTOR_MCPWM_PERIOD/2)
 #define MOTOR_WAVE_FREQ                 50           // 50Hz Single phase AC
+#define ACMOT_ERR_NO_MEMORY             ESP_ERR_NO_MEM
+#define ACMOT_PWM_MIN_VALUE             2
 #include "AacFanMotor.h"
 
-#define MOTOR_DRV_EN_PIN        GPIO_NUM_16
+#define MOTOR_DRV_EN_PIN            GPIO_NUM_16
 // #define MOTOR_DRV_FAULT_PIN     GPIO_NUM_17
-#define MOTOR_PWM_HS_PIN        GPIO_NUM_21
-#define MOTOR_PWM_HS_PIN_ACTLVL 1
-#define MOTOR_PWM_LS_PIN        GPIO_NUM_22
-#define MOTOR_PWM_LS_PIN_ACTLVL 1
+#define MOTOR_PWM_HS_PIN            GPIO_NUM_21
+#define MOTOR_PWM_HS_PIN_ACTLVL     1
+#define MOTOR_PWM_LS_PIN            GPIO_NUM_22
+#define MOTOR_PWM_LS_PIN_ACTLVL     1
 
 // Системный таймер (0 или 1)
-#define MOTOR_DRV_GROUP_ID      0
-#define ACMOT_ERR_NO_MEMORY     ESP_ERR_NO_MEM
+#define MOTOR_DRV_GROUP_ID          0
 
 
 using namespace std;
@@ -43,8 +44,6 @@ class CFanMotor : public AacFanMotor {
 public:
 
     const char * getName() { return this->tag; };
-
-    SemaphoreHandle_t hxSem = xSemaphoreCreateCounting(1, 0);
 
     // Constructors
     CFanMotor() : AacFanMotor{MOTOR_WAVE_FREQ, 0.0f}, _direction{1}, hTimer_{NULL} {};

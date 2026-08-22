@@ -30,15 +30,15 @@ void motor_deinit(CTestAacFanMotor &mot = motor){
 TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-90 degs", "[acfan]")
 {
     // Условия теста
-    const float MaxAngle = ACMOTOR_SINE_MAX_ANGLE;           // Maximum Degrees
-    const acmot_sineval_t MaxValue = ACMOTOR_SINE_MAX_VALUE; // Масимальное число счетчика ШИМ
+    const float MaxAngle = ACMOT_SINE_MAX_ANGLE;           // Maximum Degrees
+    const acmot_sineval_t MaxValue = ACMOT_SINE_MAX_VALUE; // Масимальное число счетчика ШИМ
     const acmot_sineval_t Amplitude = MaxValue;              // Амплитуда квантования
     const float relTolerance = 2.0f;                         // Точность расхождения в процентах
 
-    CTestAacFanMotor mot{ACMOTOR_SINE_MIN_FREQ, 100.0f};
+    CTestAacFanMotor mot{ACMOT_SINE_MIN_FREQ, 100.0f};
     motor_init(mot);
 
-    const acmot_sineval_t Offset = mot.calcSineBufferLength(ACMOTOR_SINE_MIN_FREQ);
+    const acmot_sineval_t Offset = mot.calcSineBufferLength(ACMOT_SINE_MIN_FREQ);
     
     // Создание тестового буфера и заполнение его синусом
     shared_ptr<acmot_sineval_t[]> pBuff { make_shared<acmot_sineval_t[]>(Offset) };    // массив из n элементов, равных 0
@@ -65,7 +65,7 @@ TEST_CASE("Test AacFanMotor correct calculation Sine Values 0-180 degs", "[acfan
 {
     // Условия теста
     const float MaxAngle = 180.0f;                            // Maximum Degrees
-    const acmot_sineval_t MaxValue = ACMOTOR_SINE_MAX_VALUE;  // Амплитуда квантования
+    const acmot_sineval_t MaxValue = ACMOT_SINE_MAX_VALUE;  // Амплитуда квантования
     const acmot_sineval_t Amplitude = MaxValue;              // Амплитуда квантования
     const acmot_sineval_t max_error_tol = 5;                          // Точность расхождения в процентах (в библиетеке IQmath набегающая погрешность)
     const acmot_sinefreq_t MOTOR_SINE_FREQ = MOTOR_WAVE_FREQ;
