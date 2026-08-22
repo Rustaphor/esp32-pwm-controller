@@ -24,7 +24,7 @@ void CHwManager::initAll() {
     // TODO: Времянка
     errcode = fanmot.initialize();
     if(errcode != DEVICE_OK){
-        ESP_LOGE(TAG,"Device %s init error %d", fanmot.getName(), errcode);
+        ESP_LOGE(TAG,"Device %s init error 0x%X", fanmot.getName(), errcode);
     } else {
         ESP_LOGD(TAG, "Device %s initialized", fanmot.getName());
     }

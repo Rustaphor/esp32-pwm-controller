@@ -82,7 +82,7 @@ int CMotCtrlCmd::exec_func_cb(int argc, char* argv[]) {
     if (pPwr->count > 0) {
         emptyCmd = false;
         exitcode = fanmot.setPowerPercents((float) *pPwr->dval);
-        if (exitcode == AC_ERR_MOTOR_INVALID_POWER){
+        if (exitcode == ACMOT_ERR_INVALID_POWER){
             printf("Invalid set power value. The value must be in range [0-100]\n");
             goto exit;
         }
@@ -119,7 +119,7 @@ exit:
     /* deallocate each non-null entry in argtable[] */
     arg_freetable(argtable, sizeof(argtable) / sizeof(argtable[0]));
     if (exitcode) {
-        ESP_LOGE(logTAG, "Command %s exit with error #%d", _command, exitcode);
+        ESP_LOGE(logTAG, "Command %s exit with error 0x%X", _command, exitcode);
     }
     return exitcode;
 }

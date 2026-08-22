@@ -127,7 +127,7 @@ TEST_CASE("Test AacFanMotor out of range setting power value", "[acfan]"){
 
     float in_range[] = {-1.0f, 100.01f, 110.0f};
     for (auto cur_val : in_range) {
-        TEST_ASSERT_EQUAL(AC_ERR_MOTOR_INVALID_POWER, mot.setPowerPercents(cur_val));
+        TEST_ASSERT_EQUAL(ACMOT_ERR_INVALID_POWER, mot.setPowerPercents(cur_val));
     }
     
     motor_deinit(mot);

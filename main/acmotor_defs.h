@@ -7,9 +7,9 @@
 #include <inttypes.h>
 
 // Define error codes
-#define AC_ERR_MOTOR_NO_BUFF_MEMORY     0x203
-#define AC_ERR_MOTOR_INVALID_POWER      0x205
-#define AC_ERR_MOTOR_INVALID_FREQ       0x206
+#define ACMOT_ERR_NO_MEMORY         0x203
+#define ACMOT_ERR_INVALID_POWER     0x205
+#define ACMOT_ERR_INVALID_FREQ      0x206
 
 
 // Type definitions

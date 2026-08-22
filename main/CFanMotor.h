@@ -19,10 +19,13 @@
 #define MOTOR_DRV_EN_PIN        GPIO_NUM_16
 // #define MOTOR_DRV_FAULT_PIN     GPIO_NUM_17
 #define MOTOR_PWM_HS_PIN        GPIO_NUM_21
+#define MOTOR_PWM_HS_PIN_ACTLVL 1
 #define MOTOR_PWM_LS_PIN        GPIO_NUM_22
+#define MOTOR_PWM_LS_PIN_ACTLVL 1
 
 // Системный таймер (0 или 1)
-#define MOTOR_DRV_GROUP_ID        0
+#define MOTOR_DRV_GROUP_ID      0
+#define ACMOT_ERR_NO_MEMORY     ESP_ERR_NO_MEM
 
 
 using namespace std;

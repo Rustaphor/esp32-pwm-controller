@@ -11,7 +11,8 @@
 /**
  * Максимальное (амплитудное) значение размаха функции синуса
  * 
- * @details Глобальный конфигурационный параметр, определяющий максимально возможное значение расчетное значение синусоиды. Задается в конкретной реализации "железа"
+ * @details Глобальный конфигурационный параметр, определяющий максимально возможное значение расчетное значение синусоиды.
+ *          Задается в конкретной реализации "железа"
  * @showinitializer
  */
 #ifndef ACMOTOR_SINE_MAX_VALUE
@@ -22,9 +23,9 @@
 /**
  * Минимально допустимое значение генератора ШИМ-сигналов
  * 
- * @details Данный параметр определяется схемотехническими ограничениями. \
- *  Минимально допустимая длительность импульса управления ключами MOSFET.
- *  Этот параметр также влияет и на верхнее максимальное значение ШИМ, вычитается из максимального значения счетчика.
+ * @details Данный параметр определяется схемотехническими ограничениями.
+ *          Минимально допустимая длительность импульса управления ключами MOSFET.
+ *          Этот параметр также влияет и на верхнее максимальное значение ШИМ, вычитается из максимального значения счетчика.
  * @showinitializer
  * @attention Параметр не должен быть 0. Слишкорм короткий импульс может привести к перегрузке и выходу драйвера из строя.
  */
@@ -46,13 +47,18 @@
 /**
  * Минимальная частота синусоидальной генерируемой волны мотора в Гц (например, 25)
  * 
- * @details Глобальный параметр требуется для расчета максимального размера буфера значений синуса в сэмпле. Максимальное значение достигается при минимальной частоте.
+ * @details Глобальный параметр требуется для расчета максимального размера буфера значений синуса в сэмпле.
+ *          Максимальное значение достигается при минимальной частоте.
  * @showinitializer
  */
 #ifndef ACMOTOR_SINE_MIN_FREQ
 #define ACMOTOR_SINE_MIN_FREQ     25
 #endif
 
+#ifndef ACMOT_ERR_NO_MEMORY
+#warning Directive ACMOT_ERR_NO_MEMORY must have a standard error number, as in the current system.
+#define ACMOT_ERR_NO_MEMORY         0x203
+#endif
 
 typedef int acmot_err_t;
 typedef enum {
@@ -99,7 +105,7 @@ public:
         uint16_t sine_array_len = calcSineBufferLength(ACMOTOR_SINE_MIN_FREQ);
         buff = _allocWaveBuffer(_hSineWaveBuffer, sine_array_len);
         if (!buff.has_value()) {
-            result = AC_ERR_MOTOR_NO_BUFF_MEMORY;
+            result = ACMOT_ERR_NO_MEMORY;
             goto end_init;
         }
 
@@ -162,7 +168,7 @@ public:
         }
 
         if (!_currentPower) {
-            result = AC_ERR_MOTOR_INVALID_POWER;
+            result = ACMOT_ERR_INVALID_POWER;
             goto end_run;
         }
 
@@ -232,7 +238,7 @@ public:
 
         // Проверка корректности входных данных
         if (powerOutPcnts < 0 || powerOutPcnts > 100) {
-            result = AC_ERR_MOTOR_INVALID_POWER;
+            result = ACMOT_ERR_INVALID_POWER;
             goto end_set_power;
         }
         _currentPower = _setPowerOutImmediatelyLL(powerOutPcnts);
@@ -272,7 +278,7 @@ public:
 
         // TODO: Добавить валидатор установки частоты
         if (freq < ACMOTOR_SINE_MIN_FREQ) {
-            result = AC_ERR_MOTOR_INVALID_FREQ;
+            result = ACMOT_ERR_INVALID_FREQ;
             goto end_set_freq;
         }
 
