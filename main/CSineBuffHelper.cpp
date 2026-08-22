@@ -27,11 +27,17 @@ _GLIBCXX_NODISCARD acmot_sineval_t CSineBuffHelper::percents2Amplitude(float prc
 size_t CSineBuffHelper::fill_buffer(acmot_sineval_t amplitude) noexcept
 {
     size_t buff_len = _hBuff.second - _hBuff.first;
-    if (amplitude > _MAX_PWM_VALUE) amplitude = _MAX_PWM_VALUE;                     // limit to max pwm value
 
     const _iq offset = _IQ(_MIN_PWM_VALUE);
-    const _iq MaxVal = _IQ(amplitude) - offset;                                 // Амплитудное значение мощности
-    _iq dAngleRad = _IQmpy(_IQ(_max_angle/buff_len), _IQ(M_PI/180.0f));              // Convert dAlpha angle to dAlphaRad (radians)
+    _iq MaxVal;
+
+    // limit to max pwm value
+    if (amplitude > _MAX_PWM_VALUE - _MIN_PWM_VALUE) {
+        amplitude = _MAX_PWM_VALUE - _MIN_PWM_VALUE;
+    }
+    
+    MaxVal = _IQ(amplitude) - offset;
+    _iq dAngleRad = _IQmpy(_IQ(_max_angle/buff_len), _IQ(M_PI/180.0f));             // Convert dAlpha angle to dAlphaRad (radians)
     _iq CurAngleRad = 0, val;
     int t2v;
  

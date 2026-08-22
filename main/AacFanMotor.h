@@ -15,8 +15,8 @@
  *          Задается в конкретной реализации "железа"
  * @showinitializer
  */
-#ifndef ACMOTOR_SINE_MAX_VALUE
-#error ACMOTOR_SINE_MAX_VALUE must be defined before first include!
+#ifndef ACMOT_SINE_MAX_VALUE
+#error ACMOT_SINE_MAX_VALUE must be defined before first include!
 #endif
 
 
@@ -29,9 +29,9 @@
  * @showinitializer
  * @attention Параметр не должен быть 0. Слишкорм короткий импульс может привести к перегрузке и выходу драйвера из строя.
  */
-#ifndef ACMOTOR_PWM_MIN_VALUE
-#warning ACMOTOR_PWM_MIN_VALUE must be defined before first include! MOSFET switches are not working with too short pulses.
-#define ACMOTOR_PWM_MIN_VALUE 0
+#ifndef ACMOT_PWM_MIN_VALUE
+#warning ACMOT_PWM_MIN_VALUE must be defined before first include! MOSFET switches are not working with too short pulses.
+#define ACMOT_PWM_MIN_VALUE 0
 #endif
 
 
@@ -40,8 +40,8 @@
  * @details Глобальный параметр, используемый для расчета таблицы значений (буфера) синусоидной волны.
  * @showinitializer
  */
-#ifndef ACMOTOR_SINE_MAX_ANGLE
-#define ACMOTOR_SINE_MAX_ANGLE    90.0f
+#ifndef ACMOT_SINE_MAX_ANGLE
+#define ACMOT_SINE_MAX_ANGLE    90.0f
 #endif
 
 /**
@@ -51,8 +51,8 @@
  *          Максимальное значение достигается при минимальной частоте.
  * @showinitializer
  */
-#ifndef ACMOTOR_SINE_MIN_FREQ
-#define ACMOTOR_SINE_MIN_FREQ     25
+#ifndef ACMOT_SINE_MIN_FREQ
+#define ACMOT_SINE_MIN_FREQ     25
 #endif
 
 #ifndef ACMOT_ERR_NO_MEMORY
@@ -85,7 +85,7 @@ public:
      */
     AacFanMotor(acmot_sinefreq_t freq, float powerOut = 0.0f) : _currentFreq{freq}{
         if (powerOut > 0 && powerOut <= 100) {
-            auto sbh = CSineBuffHelper(_hSineWaveBuffer, _currentFreq, ACMOTOR_SINE_MAX_ANGLE, ACMOTOR_SINE_MAX_VALUE, ACMOTOR_PWM_MIN_VALUE);
+            auto sbh = CSineBuffHelper(_hSineWaveBuffer, _currentFreq, ACMOT_SINE_MAX_ANGLE, ACMOT_SINE_MAX_VALUE, ACMOT_PWM_MIN_VALUE);
             _currentPower = sbh.percents2Amplitude(powerOut);
         } else {
             _currentPower = 0;
@@ -102,7 +102,7 @@ public:
         acmot_err_t result;
 
         optional<const acmot_sineval_t*> buff;
-        uint16_t sine_array_len = calcSineBufferLength(ACMOTOR_SINE_MIN_FREQ);
+        uint16_t sine_array_len = calcSineBufferLength(ACMOT_SINE_MIN_FREQ);
         buff = _allocWaveBuffer(_hSineWaveBuffer, sine_array_len);
         if (!buff.has_value()) {
             result = ACMOT_ERR_NO_MEMORY;
@@ -261,7 +261,7 @@ public:
      */
     float getPowerOutPercent() noexcept {
         sem.acquire();
-        auto sbh = CSineBuffHelper(_hSineWaveBuffer, _currentFreq, ACMOTOR_SINE_MAX_ANGLE, ACMOTOR_SINE_MAX_VALUE, ACMOTOR_PWM_MIN_VALUE);
+        auto sbh = CSineBuffHelper(_hSineWaveBuffer, _currentFreq, ACMOT_SINE_MAX_ANGLE, ACMOT_SINE_MAX_VALUE, ACMOT_PWM_MIN_VALUE);
         float powerOut = sbh.amplitude2Percents(_currentPower);
         sem.release();
         return powerOut;
@@ -277,7 +277,7 @@ public:
         }
 
         // TODO: Добавить валидатор установки частоты
-        if (freq < ACMOTOR_SINE_MIN_FREQ) {
+        if (freq < ACMOT_SINE_MIN_FREQ) {
             result = ACMOT_ERR_INVALID_FREQ;
             goto end_set_freq;
         }
@@ -348,12 +348,12 @@ private:
         hBuff = {_hSineWaveBuffer.first, _hSineWaveBuffer.first + sine_buff_len};
         _currentFreq = freq;
 
-        auto sh = CSineBuffHelper(hBuff, freq, ACMOTOR_SINE_MAX_ANGLE, ACMOTOR_SINE_MAX_VALUE, ACMOTOR_PWM_MIN_VALUE);
+        auto sh = CSineBuffHelper(hBuff, freq, ACMOT_SINE_MAX_ANGLE, ACMOT_SINE_MAX_VALUE, ACMOT_PWM_MIN_VALUE);
         sh.fill_buffer(amplitude);
     }
 
     acmot_sineval_t _setPowerOutImmediatelyLL(float powerout_prcnts) noexcept {
-        auto sbh = CSineBuffHelper(_hSineWaveBuffer, _currentFreq, ACMOTOR_SINE_MAX_ANGLE, ACMOTOR_SINE_MAX_VALUE, ACMOTOR_PWM_MIN_VALUE);
+        auto sbh = CSineBuffHelper(_hSineWaveBuffer, _currentFreq, ACMOT_SINE_MAX_ANGLE, ACMOT_SINE_MAX_VALUE, ACMOT_PWM_MIN_VALUE);
         acmot_sineval_t power_amplitude = sbh.percents2Amplitude(powerout_prcnts);
         if (_currentPower == power_amplitude) return _currentPower;
         sbh.fill_buffer(power_amplitude);

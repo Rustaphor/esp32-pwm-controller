@@ -3,20 +3,16 @@
 #include "esp_timer.h"
 #include "hal/mcpwm_ll.h"
 #include "mcpwm_private.h"
-#include "freertos/semphr.h"
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
-SemaphoreHandle_t hxSemMot;
-StaticSemaphore_t hxSemMotBuff;
 
-#define PIN_ACTION_INVERT(x)     ((x == 1) ? 0 : 1)
-
-// Обработчик прерывания таймера ШИМ-счетчика
+// Обработчик прерывания таймера ШИМ-счетчика: назначение таблицы синусов значений DC
 bool IRAM_ATTR pwmtimer_onupdate_isr_cb(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t *edata, void *user_ctx) {
     // DRAM_ATTR (для констант)
 
     static int inc_dec = 1;
+    static bool brige_side_flag = true;
     BaseType_t task_yield = pdFALSE;
     CFanMotor* pMotor = (CFanMotor*) user_ctx;
 
@@ -34,23 +30,27 @@ bool IRAM_ATTR pwmtimer_onupdate_isr_cb(mcpwm_timer_handle_t timer, const mcpwm_
     if (pMotor->_pCurVal >= pMotor->getCurrentSineBuffer().second) {        // Достигнут максимум счетчика ШИМ
         inc_dec = -1;
         pMotor->_pCurVal = const_cast<acmot_sineval_t*>(pMotor->getCurrentSineBuffer().second) - 1;
-
-        // Disable pin actions pin for hGenerator_[0] and set no active level
-        mcpwm_ll_gen_set_continue_force_level(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[0]->gen_id, PIN_ACTION_INVERT(MOTOR_PWM_HS_PIN_ACTLVL));
-
-        // Enable pin actions for the generator hGenerator_[1]
-        mcpwm_ll_gen_disable_continue_force_action(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[1]->gen_id);
     } 
     else if (pMotor->_pCurVal < pMotor->getCurrentSineBuffer().first) {   // Достигнут минимум счетчика ШИМ
+
         inc_dec = 1;
         pMotor->_pCurVal = const_cast<acmot_sineval_t*>(pMotor->getCurrentSineBuffer().first);
-        xSemaphoreGiveFromISR(pMotor->hxSem, &task_yield);
 
-        // Disable pin actions pin for hGenerator_[1] and set no active level
-        mcpwm_ll_gen_set_continue_force_level(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[1]->gen_id, PIN_ACTION_INVERT(MOTOR_PWM_LS_PIN_ACTLVL));
+        if (brige_side_flag) {
+            // Disable pin actions pin for hGenerator_[0] and set no active level
+            mcpwm_ll_gen_set_continue_force_level(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[0]->gen_id, (!MOTOR_PWM_HS_PIN_ACTLVL));
 
-        // Enable pin actions for the generator hGenerator_[0]
-        mcpwm_ll_gen_disable_continue_force_action(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[0]->gen_id);
+            // Enable pin actions for the generator hGenerator_[1]
+            mcpwm_ll_gen_disable_continue_force_action(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[1]->gen_id);
+        } else {
+            // Disable pin actions pin for hGenerator_[1] and set no active level
+            mcpwm_ll_gen_set_continue_force_level(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[1]->gen_id, (!MOTOR_PWM_LS_PIN_ACTLVL));
+
+            // Enable pin actions for the generator hGenerator_[0]
+            mcpwm_ll_gen_disable_continue_force_action(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[0]->gen_id);
+        }
+
+        brige_side_flag ^= true;
     }
 
     return task_yield;
@@ -101,11 +101,10 @@ acmot_err_t CFanMotor::hw_init()
     };
 
     mcpwm_comparator_config_t compare_config = {
-        .flags{ .update_cmp_on_tez = true,
-                .update_cmp_on_tep = true }
+        .flags{ .update_cmp_on_tez = true }
     };
 
-    const int gen_gpios[2] = {MOTOR_PWM_HS_PIN, MOTOR_PWM_LS_PIN};
+    const int gen_gpios[2][2] = {{MOTOR_PWM_HS_PIN, MOTOR_PWM_HS_PIN_ACTLVL}, {MOTOR_PWM_LS_PIN, MOTOR_PWM_LS_PIN_ACTLVL}};
     mcpwm_generator_config_t gen_config = {};
 
     ESP_LOGD(tag, "Create MCPWM operator");
@@ -136,25 +135,32 @@ acmot_err_t CFanMotor::hw_init()
     ESP_ERROR_CHECK(mcpwm_new_gpio_fault(&gpio_fault_config, &hFaultPin_));
 #endif
 
+
     ESP_LOGD(tag, "Create PWM generator(s)");
     for (int i = 0; i < 2; i++) {
-        gen_config.gen_gpio_num = gen_gpios[i];
+        // gen_config.gen_gpio_num = gen_gpios[i];
+        // gen_config.flags.invert_pwm = true;
+
+        gen_config = {
+            .gen_gpio_num = gen_gpios[i][0],
+            .flags{ .invert_pwm = (bool) !gen_gpios[i][1] }
+        };
         result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_new_generator(hOperator_, &gen_config, &hGenerator_[i]));
         if (result) goto exit_error_init;
     }
 
-    result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_action_on_timer_event(hGenerator_[0],
-                                    MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_LOW)));
+    // result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_action_on_timer_event(hGenerator_[0],
+    //                                 MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)));
+    // if (result) goto exit_error_init;
+    result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_actions_on_compare_event(hGenerator_[0],
+            MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, hComparator_, MCPWM_GEN_ACTION_LOW),
+            MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, hComparator_, MCPWM_GEN_ACTION_HIGH),
+            MCPWM_GEN_COMPARE_EVENT_ACTION_END()));
     if (result) goto exit_error_init;
-    result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_action_on_compare_event(hGenerator_[0],
-                                    MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, hComparator_, MCPWM_GEN_ACTION_HIGH)));
-    if (result) goto exit_error_init;
-
-    result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_action_on_timer_event(hGenerator_[1],
-                                    MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, MCPWM_TIMER_EVENT_FULL, MCPWM_GEN_ACTION_HIGH)));
-    if (result) goto exit_error_init;
-    result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_action_on_compare_event(hGenerator_[1],
-                                    MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, hComparator_, MCPWM_GEN_ACTION_LOW)));
+    result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_actions_on_compare_event(hGenerator_[1],
+            MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, hComparator_, MCPWM_GEN_ACTION_LOW),
+            MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, hComparator_, MCPWM_GEN_ACTION_HIGH),
+            MCPWM_GEN_COMPARE_EVENT_ACTION_END()));
     if (result) goto exit_error_init;
 
     // Регистрация обработчика прерывания таймера
@@ -163,7 +169,6 @@ acmot_err_t CFanMotor::hw_init()
     if (result) goto exit_error_init;
 
     _pCurVal = const_cast<acmot_sineval_t*>(getCurrentSineBuffer().first); // Reset pointer
-    hxSemMot = xSemaphoreCreateMutexStatic(&hxSemMotBuff);
 
     ESP_LOGI(tag,"Motor driver initialize passed!");
 
@@ -197,7 +202,6 @@ acmot_err_t CFanMotor::hw_deinit()
     if (result) goto err_hwinit;
 
     ESP_LOGD(tag,"Hardware de-initialized");
-    vSemaphoreDelete(hxSemMot);
     return DEVICE_OK;
 
 err_hwinit:
@@ -260,4 +264,3 @@ acmot_err_t CFanMotor::hw_set_enabled(bool en)
 #endif
     return result;
 }
-
