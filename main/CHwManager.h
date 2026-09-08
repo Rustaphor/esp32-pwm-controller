@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IDevice.h"
+#include "ADevice.h"
 #include <vector>
 #include <memory>
 
@@ -20,8 +20,8 @@ public:
     void deinitAll();
 
     // Дополнительно: метод для добавления устройства
-    void addDevice(shared_ptr<IDevice> device);
+    void addDevice(shared_ptr<ADevice> device);
 
 private:
-    vector<shared_ptr<IDevice>> m_devices;
+    vector<shared_ptr<ADevice>> m_devices;
 };

@@ -46,7 +46,7 @@ void CHwManager::deinitAll() {
     ESP_LOGI(TAG, "All devices has been uninitialized");
 }
 
-void CHwManager::addDevice(std::shared_ptr<IDevice> device) {
+void CHwManager::addDevice(std::shared_ptr<ADevice> device) {
     if (device) {
         m_devices.push_back(device);
     }

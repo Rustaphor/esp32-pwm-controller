@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026
 #pragma once
-#include "IDevice.h"
+#include "ADevice.h"
 #include <optional>
 #include <utility>
 #include <semaphore>
@@ -10,7 +10,7 @@
 
 /**
  * Максимальное (амплитудное) значение размаха функции синуса
- * 
+ *
  * @details Глобальный конфигурационный параметр, определяющий максимально возможное значение расчетное значение синусоиды.
  *          Задается в конкретной реализации "железа"
  * @showinitializer
@@ -22,7 +22,7 @@
 
 /**
  * Минимально допустимое значение генератора ШИМ-сигналов
- * 
+ *
  * @details Данный параметр определяется схемотехническими ограничениями.
  *          Минимально допустимая длительность импульса управления ключами MOSFET.
  *          Этот параметр также влияет и на верхнее максимальное значение ШИМ, вычитается из максимального значения счетчика.
@@ -46,7 +46,7 @@
 
 /**
  * Минимальная частота синусоидальной генерируемой волны мотора в Гц (например, 25)
- * 
+ *
  * @details Глобальный параметр требуется для расчета максимального размера буфера значений синуса в сэмпле.
  *          Максимальное значение достигается при минимальной частоте.
  * @showinitializer
@@ -76,7 +76,7 @@ using namespace std;
 /**
 * @brief Абстрактрый класс управления мотором переменного тока с фазосдвигающим конденсатором для вентиллятора
 */
-class AacFanMotor : public IDevice {
+class AacFanMotor : public ADevice {
 
 public:
 
@@ -101,12 +101,16 @@ public:
     * @details Используется обычно при первичной инициализации и восстановлении энергопотребления. После выделения памяти вызывает метод hw_init()
     * @retval DEVICE_OK - успех, иначе код ошибки
     */
-    acmot_err_t initialize() override {
+    acmot_err_t initialize() {
         sem.acquire();
         acmot_err_t result;
-
+        uint16_t sine_array_len;
         optional<const acmot_sineval_t*> buff;
-        uint16_t sine_array_len = calcSineBufferLength(ACMOT_SINE_MIN_FREQ);
+
+        result = ADevice::initialize();
+        if (result != DEVICE_OK) { goto end_init; }
+
+        sine_array_len = calcSineBufferLength(ACMOT_SINE_MIN_FREQ);
         buff = _allocWaveBuffer(_hSineWaveBuffer, sine_array_len);
         if (!buff.has_value()) {
             result = ACMOT_ERR_NO_MEMORY;
@@ -114,15 +118,8 @@ public:
         }
 
         _resizeWaveBufferAndFill(_hSineWaveBuffer, _currentFreq, _currentPower);
+        dev_state.reserved = (dev_state_reserved_t) AC_MOTOR_IS_STOPPED;
 
-        result = this->hw_init();
-        if (result != DEVICE_OK) { goto end_init_memfree; }
-        _devState.sysState = DEV_INITIALIZED;
-        goto end_init;
-
-    end_init_memfree:
-        free((void*) _hSineWaveBuffer.first);
-        _hSineWaveBuffer = {};       
     end_init:
         sem.release();
         return result;
@@ -133,51 +130,47 @@ public:
     * @details Используется обычно при переходе в спязий режим. Метод должен быть помещен в десткуртор финального класса.
     * @retval DEVICE_OK - успех, иначе код ошибки
     */
-    acmot_err_t deinitialize() override {
+    acmot_err_t deinitialize() {
         sem.acquire();
         acmot_err_t result;
 
-        // Проверка инициализирован ли мотор
-        if (_devState.sysState == DEV_NOT_INITIALIZED) {
-            result = DEVICE_NOT_INITIALIZED;
-            goto end_deinit;
-        }
-        // TODO: (else if) Выполнить проврки других состояний мотора и если мотор не остановлен, выполнить процедуру аваринйной остановки
+        // TODO: Выполнить проверку состояний мотора (STOPPED, FAILURE, BUSY) и обработать каждый случай.
 
-        result = hw_deinit();
+        result = ADevice::deinitialize();
+        if (result != DEVICE_OK) { goto end_deinit; }
+
+        // Очистка буффера
         if (_hSineWaveBuffer.first) {
-            free(const_cast<acmot_sineval_t*>(_hSineWaveBuffer.first));
+            free((void*) _hSineWaveBuffer.first);
             _hSineWaveBuffer = {};
         }
-        _devState.sysState = DEV_NOT_INITIALIZED;
+
+        dev_state.reserved = (dev_state_reserved_t) AC_MOTOR_UNKNOWN_STATE;
 
     end_deinit:
         sem.release();
         return result;
     };
-  
+
     /**
      * @brief Запуск мотора с прежней (ранее установленной) мощностью
      */
-    acmot_err_t run() { 
+    acmot_err_t run() noexcept {
         sem.acquire();
-        acmot_err_t result = DEVICE_OK;
+        acmot_err_t result;
 
-        // Проверка инициализирован ли мотор
-        if (_devState.sysState == DEV_NOT_INITIALIZED) {
-            result = DEVICE_NOT_INITIALIZED;
-            goto end_run;
-        } else if ((AcMotorState_t) _devState.reserved == AC_MOTOR_IS_RUNNING){  // Check if already running.
-            goto end_run;
-        }
-
-        if (!_currentPower) {
+        // Проверка инициализирован ли мотор или не вращается ли он уже
+        result = checkCurrentStateOrGetError(DEV_INITIALIZED);
+        if (result != DEVICE_OK || (AcMotorState_t) dev_state.reserved == AC_MOTOR_IS_RUNNING) goto end_run;
+        
+        if (!_currentPower) {    // Если мощность 0, то запуск невозможен
             result = ACMOT_ERR_INVALID_POWER;
-            goto end_run;
+        } else if ((AcMotorState_t) dev_state.reserved == AC_MOTOR_IN_FAILURE) {    // Если мотор в состоянии ошибки, то запуск невозможен
+            result = DEVICE_ERR_IN_FAILURE_STATE;
+        } else if ((AcMotorState_t) dev_state.reserved == AC_MOTOR_IS_STOPPED) {    // Если мотор остановлен, то запуск возможен
+            result = this->hw_run(_currentPower);   // Запуск мотора с текущей мощностью
+            if (result == DEVICE_OK) dev_state.reserved = (dev_state_reserved_t) AC_MOTOR_IS_RUNNING;
         }
-
-        result = this->hw_run(_currentPower);
-        if (result == DEVICE_OK) _devState.reserved = (dev_state_reserved_t) AC_MOTOR_IS_RUNNING;
 
     end_run:
         sem.release();
@@ -187,29 +180,19 @@ public:
     /**
     * @brief Остановка мотора
     */
-    acmot_err_t stop() {
+    acmot_err_t stop() noexcept {
         sem.acquire();
         acmot_err_t result;
 
-        if (_devState.sysState == DEV_NOT_INITIALIZED) {
-            result = DEVICE_NOT_INITIALIZED;
-            goto exit_stop;
-        }
+        result = checkCurrentStateOrGetError(DEV_INITIALIZED);
+        if (result != DEVICE_OK || (AcMotorState_t) dev_state.reserved == AC_MOTOR_IS_STOPPED) goto exit_stop;
 
-        switch ((AcMotorState_t) _devState.reserved)
-        {
-        case AC_MOTOR_IS_STOPPED:
-            result = DEVICE_OK;
-            break;
-
-        case AC_MOTOR_IS_RUNNING:
+        if ((AcMotorState_t) dev_state.reserved == AC_MOTOR_IN_FAILURE) { // Если мотор в состоянии ошибки, то остановка аварийная
+            result = DEVICE_ERR_IN_FAILURE_STATE;
+            // TODO: добавить аварийную остаоноку мотора, например, блокировкой драйвера.
+        } else if ((AcMotorState_t) dev_state.reserved == AC_MOTOR_IS_RUNNING) { // Если мотор вращается, то остановка штатная
             result = this->hw_stop();
-            _devState.reserved = (dev_state_reserved_t) AC_MOTOR_IS_STOPPED;
-            break;
-        
-        default:
-            result = DEVICE_IS_BUSY_NOW;
-            break;
+            if (result == DEVICE_OK) dev_state.reserved = (dev_state_reserved_t) AC_MOTOR_IS_STOPPED;
         }
 
     exit_stop:
@@ -217,12 +200,6 @@ public:
         return result;
     }
 
-    /**
-     * @brief Получение текущего состояния мотора. Потокобезопасно.
-     * @retval DEVICE_OK - мотор остановлен, остальные статусы
-     */
-    __always_inline
-    devState_t getCurrentState() override { return _devState; }
 
     /**
      * @brief Set motor speed/power
@@ -232,14 +209,12 @@ public:
     acmot_err_t setPowerPercents(float powerOutPcnts) noexcept {
 
         sem.acquire();
-        acmot_err_t result = DEVICE_OK;
+        acmot_err_t result;
 
-        // Проверка инициализирован ли мотор
-        if (_devState.sysState == DEV_NOT_INITIALIZED) {
-            result = DEVICE_NOT_INITIALIZED;
-            goto end_set_power;
-        }
+        result = checkCurrentStateOrGetError(DEV_INITIALIZED);
+        if (result != DEVICE_OK) goto end_set_power;
 
+        // TODO: Доавить функцию-валидатор установки мощности, например, для защиты от перегрева мотора или перегрузки драйвера.
         // Проверка корректности входных данных
         if (powerOutPcnts < 0 || powerOutPcnts > 100) {
             result = ACMOT_ERR_INVALID_POWER;
@@ -248,10 +223,10 @@ public:
         _currentPower = _setPowerOutImmediatelyLL(powerOutPcnts);
 
         // Если нуль, по факту остановка мотора
-        if (_currentPower == 0 && _devState.reserved == (dev_state_reserved_t) AC_MOTOR_IS_RUNNING)
+        if (_currentPower == 0 && dev_state.reserved == (dev_state_reserved_t) AC_MOTOR_IS_RUNNING)
         {
             result = this->hw_stop();
-            _devState.reserved = (dev_state_reserved_t) AC_MOTOR_IS_STOPPED;
+            dev_state.reserved = (dev_state_reserved_t) AC_MOTOR_IS_STOPPED;
         }
 
     end_set_power:
@@ -271,14 +246,13 @@ public:
         return powerOut;
     };
 
-    // NOTE: Not implemented yet
-    acmot_err_t setFrequency(acmot_sinefreq_t freq) {
+    // WARNING: Not implemented yet
+    acmot_err_t setFrequency(acmot_sinefreq_t freq) noexcept {
         sem.acquire();
-        acmot_err_t result = DEVICE_OK;
-        if (_devState.sysState == DEV_NOT_INITIALIZED) {
-            result = DEVICE_NOT_INITIALIZED;
-            goto end_set_freq;
-        }
+        acmot_err_t result;
+
+        result = checkCurrentStateOrGetError(DEV_INITIALIZED);
+        if (result != DEVICE_OK) goto end_set_freq;
 
         // TODO: Добавить валидатор установки частоты
         if (freq < ACMOT_SINE_MIN_FREQ) {
@@ -298,18 +272,6 @@ public:
 protected:
 
     binary_semaphore sem{1};
-
-    /**
-    * @brief Первичная инициалиация оборудования для упраления мотором
-    * @details Метод вызывается из метода initialize()
-    */
-    virtual acmot_err_t hw_init() = 0;
-
-    /**
-     * @brief Деинициализация оборудования, например, при переходе в спящий режим
-     * @details Метод вызывается из метода deinitialize()
-     */
-    virtual acmot_err_t hw_deinit() = 0;
 
     /**
      * @brief Функция вычисления длинны массива (буфера) значений синуса
@@ -367,8 +329,4 @@ private:
     acmot_sinefreq_t _currentFreq;
     acmot_sineval_t _currentPower;
     pair<const acmot_sineval_t*, const acmot_sineval_t*> _hSineWaveBuffer;
-    devState_t _devState = {
-        .sysState{DEV_NOT_INITIALIZED},
-        .reserved = (dev_state_reserved_t) AC_MOTOR_IS_STOPPED
-    };
 };

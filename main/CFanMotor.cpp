@@ -175,7 +175,7 @@ acmot_err_t CFanMotor::hw_init()
 
 exit_error_init:
     ESP_LOGE(tag,"Error 0x%X mcpwm-driver fail initialize", result);
-    return DEVICE_INIT_FALURE;
+    return DEVICE_ERR_INIT_FALURE;
 }
 
 acmot_err_t CFanMotor::hw_deinit()
