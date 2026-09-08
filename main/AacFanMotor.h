@@ -62,10 +62,12 @@
 
 typedef int acmot_err_t;
 typedef enum {
+    AC_MOTOR_UNKNOWN_STATE = 0,
     AC_MOTOR_IS_STOPPED = 0x04,
     AC_MOTOR_IS_RUNNING,
-    AC_MOTOR_IN_FAILURE,
+    AC_MOTOR_IN_FAILURE
 } AcMotorState_t;
+
 
 
 using namespace std;
@@ -90,6 +92,8 @@ public:
         } else {
             _currentPower = 0;
         }
+
+        dev_state.reserved = (dev_state_reserved_t) AC_MOTOR_UNKNOWN_STATE;
     }
 
     /**

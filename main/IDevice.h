@@ -28,6 +28,7 @@ class IDevice {
 public:
     virtual ~IDevice() = default;
 
+    // __always_inline
     virtual devState_t getCurrentState() = 0;
 
     // Метод для инициализации конкретного устройства
@@ -35,6 +36,14 @@ public:
 
     // Метод для деинициализации конкретного устройства
     virtual int deinitialize() = 0;
+
+protected:
+
+    devState_t dev_state = {
+        .sysState{DEV_NOT_INITIALIZED},
+        .reserved{0}
+    };
+
 };
 
 #endif // IDEVICE_H

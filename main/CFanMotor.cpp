@@ -1,5 +1,4 @@
 #include "CFanMotor.h"
-#include "esp_log.h"
 #include "esp_timer.h"
 #include "hal/mcpwm_ll.h"
 #include "mcpwm_private.h"
@@ -12,7 +11,7 @@ bool IRAM_ATTR pwmtimer_onupdate_isr_cb(mcpwm_timer_handle_t timer, const mcpwm_
     // DRAM_ATTR (для констант)
 
     static int inc_dec = 1;
-    static bool brige_side_flag = true;
+    static bool left_bridge_f = true;
     BaseType_t task_yield = pdFALSE;
     CFanMotor* pMotor = (CFanMotor*) user_ctx;
 
@@ -36,21 +35,21 @@ bool IRAM_ATTR pwmtimer_onupdate_isr_cb(mcpwm_timer_handle_t timer, const mcpwm_
         inc_dec = 1;
         pMotor->_pCurVal = const_cast<acmot_sineval_t*>(pMotor->getCurrentSineBuffer().first);
 
-        if (brige_side_flag) {
-            // Disable pin actions pin for hGenerator_[0] and set no active level
-            mcpwm_ll_gen_set_continue_force_level(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[0]->gen_id, (!MOTOR_PWM_HS_PIN_ACTLVL));
+        if (left_bridge_f) {
+            // Disable pin actions for hGenerator_[0] and set no active level
+            mcpwm_ll_gen_set_continue_force_level(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[0]->gen_id, (!MOTOR_PWM_PIN_ACTLVL));
 
             // Enable pin actions for the generator hGenerator_[1]
             mcpwm_ll_gen_disable_continue_force_action(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[1]->gen_id);
         } else {
-            // Disable pin actions pin for hGenerator_[1] and set no active level
-            mcpwm_ll_gen_set_continue_force_level(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[1]->gen_id, (!MOTOR_PWM_LS_PIN_ACTLVL));
+            // Disable pin actions for hGenerator_[1] and set no active level
+            mcpwm_ll_gen_set_continue_force_level(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[1]->gen_id, (!MOTOR_PWM_PIN_ACTLVL));
 
             // Enable pin actions for the generator hGenerator_[0]
             mcpwm_ll_gen_disable_continue_force_action(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), pMotor->hComparator_->oper->oper_id, pMotor->hGenerator_[0]->gen_id);
         }
 
-        brige_side_flag ^= true;
+        left_bridge_f ^= true;
     }
 
     return task_yield;
@@ -70,7 +69,7 @@ acmot_err_t CFanMotor::hw_init()
         .mode = GPIO_MODE_OUTPUT
     };
     ESP_ERROR_CHECK(gpio_config(&drv_en_config));
-    ESP_ERROR_CHECK(gpio_set_level(MOTOR_DRV_EN_PIN, 0));
+    hw_set_enabled(false);
 #endif
 
 
@@ -104,7 +103,7 @@ acmot_err_t CFanMotor::hw_init()
         .flags{ .update_cmp_on_tez = true }
     };
 
-    const int gen_gpios[2][2] = {{MOTOR_PWM_HS_PIN, MOTOR_PWM_HS_PIN_ACTLVL}, {MOTOR_PWM_LS_PIN, MOTOR_PWM_LS_PIN_ACTLVL}};
+    const int gen_gpios[2][2] = {{MOTOR_PWM_HS_PIN, MOTOR_PWM_PIN_ACTLVL}, {MOTOR_PWM_LS_PIN, MOTOR_PWM_PIN_ACTLVL}};
     mcpwm_generator_config_t gen_config = {};
 
     ESP_LOGD(tag, "Create MCPWM operator");
@@ -183,6 +182,11 @@ acmot_err_t CFanMotor::hw_deinit()
 {
     acmot_err_t result;
 
+// Выключение микросхемы драйвера
+#ifdef MOTOR_DRV_EN_PIN
+    hw_set_enabled(false);
+#endif
+
     result = mcpwm_del_generator(hGenerator_[1]);
     if (result) goto err_hwinit;
     result = mcpwm_del_generator(hGenerator_[0]);
@@ -220,19 +224,37 @@ acmot_err_t CFanMotor::hw_run(const acmot_sineval_t powerOut)
 {
     mcpwm_comparator_set_compare_value(hComparator_, 0);
 
+    // Отключение генерации на пине противоположного (правого) полумоста ключей.
+    mcpwm_ll_gen_set_continue_force_level(MCPWM_LL_GET_HW(MOTOR_DRV_GROUP_ID), hComparator_->oper->oper_id, hGenerator_[1]->gen_id, (!MOTOR_PWM_PIN_ACTLVL));
+
     auto result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_timer_enable(hTimer_));
     if (result) {
         ESP_LOGE(tag, "Error 0x%X driver mcpwm timer enable failed", result);
-        return result;
+        goto error_exit;
     }
 
     result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_timer_start_stop(hTimer_, MCPWM_TIMER_START_NO_STOP));
     if (result) {
         ESP_LOGE(tag, "Error 0x%X driver mcpwm timer start-stop failed", result);
+        mcpwm_timer_disable(hTimer_);
+        goto error_exit;
     }
+
+    // Включение микросхемы драйвера
+#ifdef MOTOR_DRV_EN_PIN
+    result = hw_set_enabled(true);
+    if (result) {
+        mcpwm_timer_start_stop(hTimer_, MCPWM_TIMER_STOP_EMPTY);
+        mcpwm_timer_disable(hTimer_);
+        goto error_exit;
+    }  
+#endif
 
     ESP_LOGI(tag, "Motor driver started.");
     _pCurVal = const_cast<acmot_sineval_t*>(getCurrentSineBuffer().first);  // Reset pointer
+    return result;
+
+error_exit:
     return result;
 }
 
@@ -245,6 +267,13 @@ acmot_err_t CFanMotor::hw_stop()
         return result;
     }
 
+    // Включение микросхемы драйвера
+    // TODO: Перенести в асинхронную задачу
+#ifdef MOTOR_DRV_EN_PIN
+    hw_set_enabled(false);
+#endif
+
+    // TODO: Перенести в асинхронную задачу
     result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_timer_disable(hTimer_));
     if (result) {
         ESP_LOGE(tag, "Error 0x%X driver mcpwm timer disabling", result);
@@ -255,12 +284,3 @@ acmot_err_t CFanMotor::hw_stop()
     return DEVICE_OK;
 }
 
-acmot_err_t CFanMotor::hw_set_enabled(bool en)
-{
-    acmot_err_t result = DEVICE_OK;
-#ifdef MOTOR_DRV_EN_PIN
-    result = gpio_set_level(MOTOR_DRV_EN_PIN, en);
-    ESP_LOGI(tag, "Mosfet gate driver is %s", en ? "Enable" : "Disable");
-#endif
-    return result;
-}

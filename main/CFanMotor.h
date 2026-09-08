@@ -5,6 +5,7 @@
 
 #include "driver/gpio.h"
 #include "driver/mcpwm_prelude.h"
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 
 /*
@@ -18,12 +19,12 @@
 #define ACMOT_PWM_MIN_VALUE             2
 #include "AacFanMotor.h"
 
-#define MOTOR_DRV_EN_PIN            GPIO_NUM_16
-// #define MOTOR_DRV_FAULT_PIN     GPIO_NUM_17
 #define MOTOR_PWM_HS_PIN            GPIO_NUM_21
-#define MOTOR_PWM_HS_PIN_ACTLVL     1
-#define MOTOR_PWM_LS_PIN            GPIO_NUM_22
-#define MOTOR_PWM_LS_PIN_ACTLVL     1
+#define MOTOR_PWM_LS_PIN            GPIO_NUM_19
+#define MOTOR_PWM_PIN_ACTLVL        1
+#define MOTOR_DRV_EN_PIN            GPIO_NUM_18
+#define MOTOR_DRV_EN_ACTLVL         1
+    // #define MOTOR_DRV_FAULT_PIN     GPIO_NUM_17
 
 // Системный таймер (0 или 1)
 #define MOTOR_DRV_GROUP_ID          0
@@ -33,6 +34,7 @@ using namespace std;
 
 /**
  * @brief A typical C++ class declaration
+ * 
  */
 class CFanMotor : public AacFanMotor {
 
@@ -63,7 +65,14 @@ protected:
     size_t calcSineBufferLength(acmot_sinefreq_t sine_wave_freq) noexcept override;
     acmot_err_t hw_run(const acmot_sineval_t powerOut) override;
     acmot_err_t hw_stop() noexcept override;
-    acmot_err_t hw_set_enabled(bool en);
+    esp_err_t hw_set_enabled(bool en) {
+        esp_err_t result = ESP_OK;
+        en = en ? MOTOR_DRV_EN_ACTLVL : (!MOTOR_DRV_EN_ACTLVL);
+        result = gpio_set_level(MOTOR_DRV_EN_PIN, en);
+        if (result) {
+            ESP_LOGE(tag, "Error 0x%X driver setting %s failed", result, en ? "enable" : "disable"); }
+        return result;
+    }
 
 private:
 
