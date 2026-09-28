@@ -137,12 +137,11 @@ acmot_err_t CFanMotor::hw_init()
 
     ESP_LOGD(tag, "Create PWM generator(s)");
     for (int i = 0; i < 2; i++) {
-        // gen_config.gen_gpio_num = gen_gpios[i];
-        // gen_config.flags.invert_pwm = true;
-
         gen_config = {
             .gen_gpio_num = gen_gpios[i][0],
-            .flags{ .invert_pwm = (bool) !gen_gpios[i][1] }
+#if !MOTOR_PWM_PIN_ACTLVL
+            .flags{ .invert_pwm = (bool) gen_gpios[i][1] }
+#endif
         };
         result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_new_generator(hOperator_, &gen_config, &hGenerator_[i]));
         if (result) goto exit_error_init;
@@ -151,15 +150,15 @@ acmot_err_t CFanMotor::hw_init()
     // result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_action_on_timer_event(hGenerator_[0],
     //                                 MCPWM_GEN_TIMER_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, MCPWM_TIMER_EVENT_EMPTY, MCPWM_GEN_ACTION_HIGH)));
     // if (result) goto exit_error_init;
-    result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_actions_on_compare_event(hGenerator_[0],
-            MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, hComparator_, MCPWM_GEN_ACTION_LOW),
-            MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, hComparator_, MCPWM_GEN_ACTION_HIGH),
-            MCPWM_GEN_COMPARE_EVENT_ACTION_END()));
-    if (result) goto exit_error_init;
-    result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_actions_on_compare_event(hGenerator_[1],
-            MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, hComparator_, MCPWM_GEN_ACTION_LOW),
-            MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, hComparator_, MCPWM_GEN_ACTION_HIGH),
-            MCPWM_GEN_COMPARE_EVENT_ACTION_END()));
+    for (int i = 0; i < 2; i++) {
+        result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_actions_on_compare_event(hGenerator_[i],
+                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, hComparator_, MCPWM_GEN_ACTION_LOW),
+                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, hComparator_, MCPWM_GEN_ACTION_HIGH),
+                MCPWM_GEN_COMPARE_EVENT_ACTION_END()));
+        if (result) goto exit_error_init;
+    }
+
+    result = _hwSetDefaultPinLevel();
     if (result) goto exit_error_init;
 
     // Регистрация обработчика прерывания таймера
@@ -192,7 +191,6 @@ acmot_err_t CFanMotor::hw_deinit()
     result = mcpwm_del_generator(hGenerator_[0]);
     if (result) goto err_hwinit;
 
-
     result = mcpwm_del_comparator(hComparator_);
     if (result) goto err_hwinit;
 
@@ -200,9 +198,6 @@ acmot_err_t CFanMotor::hw_deinit()
     if (result) goto err_hwinit;
 
     result = mcpwm_del_timer(hTimer_);
-    if (result) goto err_hwinit;
-
-    result = hw_set_enabled(false);
     if (result) goto err_hwinit;
 
     ESP_LOGD(tag,"Hardware de-initialized");
@@ -268,7 +263,7 @@ acmot_err_t CFanMotor::hw_stop()
     }
 
     // Включение микросхемы драйвера
-    // TODO: Перенести в асинхронную задачу
+    // TODO: Перенести в асинхронную задачу, чтобы ждать сигнала остановки (фазв в ноле)
 #ifdef MOTOR_DRV_EN_PIN
     hw_set_enabled(false);
 #endif
@@ -280,7 +275,22 @@ acmot_err_t CFanMotor::hw_stop()
         return result;
     }
 
+    _hwSetDefaultPinLevel();
+
     ESP_LOGI(tag, "Motor driver stopped.");
     return DEVICE_OK;
 }
+
+esp_err_t CFanMotor::_hwSetDefaultPinLevel(void)
+{
+    esp_err_t result;
+
+    for (int i = 0; i < 2; i++) {
+        result = mcpwm_generator_set_force_level(hGenerator_[i], (!MOTOR_PWM_PIN_ACTLVL), false);
+        if (result) return result;
+    }
+
+    return ESP_OK;
+}
+
 

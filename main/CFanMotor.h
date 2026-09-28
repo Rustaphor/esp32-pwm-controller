@@ -16,14 +16,14 @@
 #define ACMOT_SINE_MAX_VALUE            (MOTOR_MCPWM_PERIOD/2)
 #define MOTOR_WAVE_FREQ                 50           // 50Hz Single phase AC
 #define ACMOT_ERR_NO_MEMORY             ESP_ERR_NO_MEM
-#define ACMOT_PWM_MIN_VALUE             2
+#define ACMOT_PWM_MIN_VALUE             40
 #include "AacFanMotor.h"
 
 #define MOTOR_PWM_HS_PIN            GPIO_NUM_21
 #define MOTOR_PWM_LS_PIN            GPIO_NUM_19
-#define MOTOR_PWM_PIN_ACTLVL        1
+#define MOTOR_PWM_PIN_ACTLVL        0
 #define MOTOR_DRV_EN_PIN            GPIO_NUM_18
-#define MOTOR_DRV_EN_ACTLVL         1
+#define MOTOR_DRV_EN_ACTLVL         0
     // #define MOTOR_DRV_FAULT_PIN     GPIO_NUM_17
 
 // Системный таймер (0 или 1)
@@ -65,6 +65,8 @@ protected:
     size_t calcSineBufferLength(acmot_sinefreq_t sine_wave_freq) noexcept override;
     acmot_err_t hw_run(const acmot_sineval_t powerOut) override;
     acmot_err_t hw_stop() noexcept override;
+
+#ifdef MOTOR_DRV_EN_PIN
     esp_err_t hw_set_enabled(bool en) {
         esp_err_t result = ESP_OK;
         en = en ? MOTOR_DRV_EN_ACTLVL : (!MOTOR_DRV_EN_ACTLVL);
@@ -73,6 +75,7 @@ protected:
             ESP_LOGE(tag, "Error 0x%X driver setting %s failed", result, en ? "enable" : "disable"); }
         return result;
     }
+#endif
 
 private:
 
@@ -86,6 +89,7 @@ private:
     mcpwm_fault_handle_t hFaultPin_ = NULL;
 #endif
 
+    esp_err_t _hwSetDefaultPinLevel(void);
 
 };
 
