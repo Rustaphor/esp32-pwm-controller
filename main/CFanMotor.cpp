@@ -152,8 +152,8 @@ acmot_err_t CFanMotor::hw_init()
     // if (result) goto exit_error_init;
     for (int i = 0; i < 2; i++) {
         result = ESP_ERROR_CHECK_WITHOUT_ABORT(mcpwm_generator_set_actions_on_compare_event(hGenerator_[i],
-                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, hComparator_, MCPWM_GEN_ACTION_LOW),
-                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, hComparator_, MCPWM_GEN_ACTION_HIGH),
+                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_UP, hComparator_, MCPWM_GEN_ACTION_HIGH),
+                MCPWM_GEN_COMPARE_EVENT_ACTION(MCPWM_TIMER_DIRECTION_DOWN, hComparator_, MCPWM_GEN_ACTION_LOW),
                 MCPWM_GEN_COMPARE_EVENT_ACTION_END()));
         if (result) goto exit_error_init;
     }

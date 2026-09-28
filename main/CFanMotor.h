@@ -11,12 +11,12 @@
 /*
  * Настройка регистров MCPWM для управления мотором подробно описана в Chapter 29 в ESP32 Technical Reference Manual
 */
-#define MOTOR_MCPWM_TIMER_RESOLUTION_HZ 80000000     // 80MHz Частота выходе первого делителя главного тактового генератора
-#define MOTOR_MCPWM_PERIOD              942          // 84.925KHz (диапазон значений ШИМ DC 0-100%: 0...MOTOR_MCPWM_PERIOD/2)
+#define MOTOR_MCPWM_TIMER_RESOLUTION_HZ 20000000     // 20MHz Частота выходе первого делителя главного тактового генератора
+#define MOTOR_MCPWM_PERIOD              572          // 35KHz (диапазон значений ШИМ DC 0-100%: 0...MOTOR_MCPWM_PERIOD/2)
 #define ACMOT_SINE_MAX_VALUE            (MOTOR_MCPWM_PERIOD/2)
 #define MOTOR_WAVE_FREQ                 50           // 50Hz Single phase AC
 #define ACMOT_ERR_NO_MEMORY             ESP_ERR_NO_MEM
-#define ACMOT_PWM_MIN_VALUE             40
+#define ACMOT_PWM_MIN_VALUE             10
 #include "AacFanMotor.h"
 
 #define MOTOR_PWM_HS_PIN            GPIO_NUM_21
