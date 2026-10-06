@@ -29,13 +29,15 @@ public:
     virtual ~ADevice() = default;
 
     // __always_inline
-    devState_t getCurrentState() { return dev_state; }
+    devState_t getCurrentState() const { return dev_state; }
 
     // Первичная инициализация устройства
     int initialize();
 
     // Деициализация устройства
     int deinitialize();
+
+    virtual const char* getDeviceName() const = 0;
 
 protected:
 

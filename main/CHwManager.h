@@ -2,14 +2,18 @@
 
 #include "ADevice.h"
 #include <vector>
-#include <memory>
+#include <optional>
 
 using namespace std;
 
 class CHwManager {
+
 public:
-    CHwManager() = default;
-    ~CHwManager() = default;
+
+    /**
+     * @brief Конструкторы всех устройств создаются тут
+     */
+    CHwManager();
 
     // Убираем копируемые операции, если менеджеры не должны дублироваться
     CHwManager(const CHwManager&) = delete;
@@ -20,8 +24,14 @@ public:
     void deinitAll();
 
     // Дополнительно: метод для добавления устройства
-    void addDevice(shared_ptr<ADevice> device);
+    void addDevice(ADevice& device) {
+        _m_devices.push_back(&device);
+    };
+
+    optional<const ADevice*> getDeviceByName(const char * name) const noexcept;
 
 private:
-    vector<shared_ptr<ADevice>> m_devices;
+
+    const char* TAG = "HwManager";
+    vector<const ADevice*> _m_devices;
 };

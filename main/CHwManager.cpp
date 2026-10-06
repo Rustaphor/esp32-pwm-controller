@@ -5,49 +5,73 @@
 
 CFanMotor fanmot;
 
-const char* TAG = "HwManager";
+CHwManager::CHwManager()
+{
+    addDevice(fanmot);
+}
 
+void CHwManager::initAll()
+{
+    esp_err_t errcode;
+    ADevice* pDevice;
+    size_t num_devices = _m_devices.size();
 
-void CHwManager::initAll() {
-
-    int errcode;
-
-    for (auto& device : m_devices) {
-        if (device) {
-            if (!device->initialize()) {
-                // Здесь можно решить, продолжать ли инициализацию остальных
-                // или прерывать весь процесс
+    for (auto pDev : _m_devices) {
+        if (pDev && pDev->getCurrentState().sysState == DEV_NOT_INITIALIZED) {
+            pDevice = const_cast<ADevice*>(pDev);
+            errcode = pDevice->initialize();
+            if (errcode != DEVICE_OK) {
+                ESP_LOGE(TAG,"Device %s init error 0x%X", pDevice->getDeviceName(), errcode);
+            } else {
+                ESP_LOGD(TAG, "Device %s initialized", pDevice->getDeviceName());
+                num_devices--;
             }
         }
     }
 
-    // TODO: Времянка
-    errcode = fanmot.initialize();
-    if(errcode != DEVICE_OK){
-        ESP_LOGE(TAG,"Device %s init error 0x%X", fanmot.getName(), errcode);
+    if (num_devices == 0) {
+        ESP_LOGI(TAG, "All devices has been initialized");
     } else {
-        ESP_LOGD(TAG, "Device %s initialized", fanmot.getName());
+        ESP_LOGW(TAG, "%zu devices are not initialized", num_devices);
     }
-    // end
-
-    ESP_LOGI(TAG, "All devices has been initialized");
 }
 
 void CHwManager::deinitAll() {
-    // Деинициализируем в обратном порядке
-    for (auto it = m_devices.rbegin(); it != m_devices.rend(); ++it) {
-        if (*it) {
-            (*it)->deinitialize();
+    esp_err_t errcode;
+    ADevice* pDevice;
+    size_t num_devices = _m_devices.size();
+
+    for (auto pDev : _m_devices) {
+        if (!pDev) {
+            ESP_LOGW(TAG, "Null pointer in device list");
+            continue;
+        }
+        if (pDev->getCurrentState().sysState == DEV_INITIALIZED || pDev->getCurrentState().sysState == DEV_FAILURE) {
+            pDevice = const_cast<ADevice*>(pDev);
+            errcode = pDevice->deinitialize();
+            if (errcode != DEVICE_OK) {
+                ESP_LOGE(TAG,"Device %s deinit error 0x%X", pDevice->getDeviceName(), errcode);
+            } else {
+                ESP_LOGD(TAG, "Device %s initialized", pDevice->getDeviceName());
+                num_devices--;
+            }
         }
     }
-    // Очищаем вектор
-    m_devices.clear();
 
-    ESP_LOGI(TAG, "All devices has been uninitialized");
+    if (num_devices == 0) {
+        ESP_LOGI(TAG, "All devices has been uninitialized");
+    } else {
+        ESP_LOGW(TAG, "%zu devices are not uninitialized", num_devices);
+    }
 }
 
-void CHwManager::addDevice(std::shared_ptr<ADevice> device) {
-    if (device) {
-        m_devices.push_back(device);
+optional<const ADevice*> CHwManager::getDeviceByName(const char *name) const noexcept
+{
+    for (auto pDev : _m_devices) {
+        if (pDev && strcmp(pDev->getDeviceName(), name) == 0) {
+            return pDev;
+        }
     }
+
+    return nullopt;
 }
