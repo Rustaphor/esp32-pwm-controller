@@ -1,0 +1,1 @@
+- [Created СPwmCmd class inheriting from CFanMotor and AConsole2Cmd](СPwmCmd.md) — hook

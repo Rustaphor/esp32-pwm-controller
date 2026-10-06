@@ -18,6 +18,7 @@
 #include "CUartConsole2.h"
 #include "CInfoCmd.h"
 #include "CMotCtrlCmd.h"
+#include "CPwmCmd.h"
 
 // TODO: begin Потом убрать (только для отладки)
 #include <freertos/semphr.h>
@@ -126,12 +127,15 @@ void vApplicationIdleHook(void) {
 /*
 * Блок инициализации и отладочной консоли
 */
+extern CFanMotor fanmot;
 void init_debug_console(void){
     console2.initialize();
     static CInfoCmd infoCmd;
     static CMotCtrlCmd mCtrl;
+    static CPwmCmd pwmCmd(fanmot);
     console2.registerCommand(infoCmd);
     console2.registerCommand(mCtrl);
+    console2.registerCommand(pwmCmd);
 }
 
 

@@ -32,6 +32,8 @@
 
 using namespace std;
 
+class CPwmCmd;
+
 /**
  * @brief A typical C++ class declaration
  * 
@@ -42,10 +44,9 @@ class CFanMotor : public AacFanMotor {
 
     // Прототип обработчика прерывания таймера ШИМ-контроллера
     friend bool pwmtimer_onupdate_isr_cb(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t *edata, void *user_ctx);
+    friend CPwmCmd;
 
 public:
-
-    const char * getName() { return this->tag; };
 
     // Constructors
     CFanMotor() : AacFanMotor{MOTOR_WAVE_FREQ, 0.0f}, _direction{1}, hTimer_{NULL} {};
@@ -54,6 +55,8 @@ public:
     ~CFanMotor() {
         hw_deinit();
     }
+
+    const char* getDeviceName() const override { return this->tag; }
 
     // Убираем копируемые операции, если менеджеры не должны дублироваться
     CFanMotor(const CFanMotor&) = delete;
