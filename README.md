@@ -1,51 +1,134 @@
-| Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-H21 | ESP32-H4 | ESP32-P4 | ESP32-S2 | ESP32-S3 |
-| ----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | --------- | -------- | -------- | -------- | -------- |
+# ESP32 PWM Controller для вентилятора
 
-# C++ pthread Example
+![Open Source badge](https://img.shields.io/badge/Open%20Source-Free-darkgreen?logo=opensourceinitiative)
+![ESP-IDF Required badge](https://img.shields.io/badge/ESP--IDF-required-orange?logo=espressif)
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-H21 | ESP32-H4 | ESP32-P4 | ESP32-S2 | ESP32-S3 |
+----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | --------- | -------- | -------- | -------- | -------- |
 
-Support for the [C++ threads](http://www.cplusplus.com/reference/thread/thread/) in ESP-IDF is implemented on top of the [ESP-pthread](https://docs.espressif.com/projects/esp-idf/en/latest/api-reference/system/esp_pthread.html#overview) component. Thus, C++ threads created using the standard thread class constructor will automatically inherit the current ESP-pthread configuration. This example demonstrates how to leverage the thread configuration functions provided by ESP-pthread (e.g., `esp_pthread_get_default_config()` and `esp_pthread_set_cfg()`) to modify the stack sizes, priorities, names, and core affinities of the C++ threads.
+Проект представляет собой прототип регулятора мощности асинхронного двигателя вентилятора на базе микроконтроллеров ESP32. Система предназначена для управления вентиляторами мощностью 50-300 Вт, используемых в небольших вентиляционных системах.
 
-**Note: Due to the use of the C++ threads, this example is written in C++ instead of C.**
+## Основные особенности
 
-## How to use example
+- **Поддержка различных микроконтроллеров ESP32** - совместимость с широким спектром чипов ESP32 серий
+- **Встроенная консоль управления через UART** - возможность отправлять команды через последовательный порт для запуска, остановки и регулировки скорости двигателя
+- **Управление асинхронным двигателем через PWM** - генерация ШИМ сигнала (огибающая синусоидальная) для плавного регулирования мощности двигателя
+- **Модульная архитектура** - четкое разделение на слои: управление оборудованием, управление двигателем и командный интерфейс
+- **Расширяемая командная система** - удобная система добавления новых команд через ```Console2``` компонент
 
-### Hardware Required
+## Аппаратные требования
 
-This example should be able to run on any commonly available ESP32 development board.
+Для работы прототипа требуется:
 
-### Configure the project
+- Любая распространенная плата разработки на базе ESP32
+- Специальная схема прототипа мостового драйвера на силовых ключах (MOSFET) для управления двигателем
+- Двигатель переменного тока мощностью 50-300 Вт
+- Источник питания соответствующий напряжению двигателя
 
-```
+> [!NOTE]
+> Схема прототипа в данном проекте не представлена
+
+* * *
+
+## Настройка проекта
+
+### Конфигурация через menuconfig
+
+```bash
 idf.py menuconfig
 ```
+> [!NOTE]
+> Данный пункт необязателен, в случае отсутствия файла `sdkconfig`, загрузятся настройки по-умолчанию.
 
-* The default ESP-pthread configuration may also be modified under `Component config > PThreads`
+В меню конфигурации можно настроить:
 
-### Build and Flash
+- Включить/отключить UART консоль (скорость, пины)
+- Параметры двигателя (номинальная мощность, коэффициенты)
 
-Build the project and flash it to the board, then run monitor tool to view serial output:
+### Сборка и прошивка
 
+Собрать проект можно командой
+```bash
+idf.py build
 ```
-idf.py -p PORT flash monitor
+
+Также проект можно собрать с помощью [Docker][1] _Composer_
+
+```bash
+docker compose run build
+```
+> [!IMPORTANT]
+> В случае с _Docker_ все равно потребуется утилита прошивки чипа ESP32 или в составе _ESP-IDF_ или отдельная.
+
+
+Прошивка чипа ESP32 по UART и следом подключение к терминалу:
+
+```bash
+idf.py [-p <PORT>] flash monitor
+```
+или более быстрый вариант, без загрузчика (предпочтительнее)
+```bash
+idf.py [-p <PORT>] app-flash monitor
 ```
 
-(Replace PORT with the name of the serial port to use.)
 
-(To exit the serial monitor, type ``Ctrl-]``.)
+Где `<PORT>` - имя последовательного порта, к которому подключена ваша плата ESP32 (например, _COM3_ в Windows или _/dev/ttyUSB0_ в Linux).
 
-See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
+> [!NOTE]
+> Для выхода из монитора последовательного порта нажмите <kbd>Ctrl</kbd>+<kbd>]</kbd>.
 
-## Example Output
+Более подробная документация по сборке см. в разделе [WIKI][2].
 
-The following log output should appear when the example runs (note that the bootloader log has been omitted).
+## Использование
 
+После прошивки и загрузки проекта на ESP32 доступны следующие команды через UART консоль (по умолчанию 115200 бод):
+
+- `motor --on` - запустить двигатель
+- `motor --off` - остановить двигатель  
+- `motor -p <value>` - установить мощность (0-100) в процентах
+- `motor` - показать текущее состояние двигателя и PWM
+- `motor --help` - показать справку по доступным командам
+
+Возможны комбинации, например ```motor --on -p 20```.
+
+Пример использования:
+
+```bash
+> motor --on -p 100
+Motor current status:
+ state: running
+ power: 100.0%
+
+> motor -p 50
+Motor current status:
+ state: running
+ power: 50.0%
+
+> motor
+Motor current status:
+ state: stopped
+ power: 32.0%
 ```
-...
-I (380) Thread 1: Core id: 0, prio: 5, minimum free stack: 2068 bytes.
-I (0) pthread: This thread (with the default name) may run on any core.Core id: 1, prio: 5, minimum free stack: 2056 bytes.
-I (390) Thread 1: This is the INHERITING thread with the same parameters as our parent, including name. Core id: 0, prio: 5, minimum free stack: 2092 bytes.
-I (410) Thread 2: Core id: 1, prio: 5, minimum free stack: 2088 bytes.
-I (410) main: core id: 0, prio: 1, minimum free stack: 2928 bytes.
-```
+
+## Структура проекта
+
+- `main/` - основной исходный код приложения
+  - `app-main.cpp` - точка входа и инициализация _FreeRTOS_ задач
+  - `CFanMotor.*` - управление двигателем и генерация PWM
+  - `CPwmCmd.*` - консольные команды для управления PWM
+  - `CHwManager.*` - абстракция управления оборудованием
+- `test-app/` - тестовое приложение для валидации компонентов
+
+## Требования к инструментам
+
+- ESP-IDF v5.0 или выше
+- Инструменты сборки: CMake, Ninja
+- Последовательный терминал (например, PuTTY, screen, или встроенный монитор IDF)
+
+## Лицензия
+
+Проект распространяется под лицензией MIT - см. файл ```LICENSE``` для подробностей.
+
+
+[1]: https://www.docker.com/ "Docker Official Page"
+[2]: https://github.com/Rustaphor/esp32-pwm-controller/wiki "WIKI"
